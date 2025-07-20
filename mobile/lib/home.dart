@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:mobile/service/auth_service.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,6 +16,9 @@ class _HomeState extends State<Home> {
   late Timer _announcementTimer;
   DateTime currentTime = DateTime.now();
   int announcementIndex = 0;
+  String? _userName;
+  bool _isLoading = true;
+  final AuthService _authService = AuthService();
 
   final List<Map<String, String>> announcements = [
     {
@@ -57,6 +61,7 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    _loadUserName();
     _timeTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         currentTime = DateTime.now();
@@ -77,6 +82,29 @@ class _HomeState extends State<Home> {
     super.dispose();
   }
 
+  Future<void> _loadUserName() async {
+    try {
+      final userData = await _authService.getUserData();
+      if (mounted) {
+        setState(() {
+          _userName = userData?['name'];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _userName = 'Error loading name';
+        });
+        print('Error loading user name: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load user name: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,10 +113,7 @@ class _HomeState extends State<Home> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8FAFC), // slate-50
-              Color(0xFFEBF8FF), // blue-50
-            ],
+            colors: [Color(0xFFF8FAFC), Color(0xFFEBF8FF)],
           ),
         ),
         child: SafeArea(
@@ -144,7 +169,7 @@ class _HomeState extends State<Home> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Good Morning, Alex! 👋',
+                                'Good Morning, $_userName 👋',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -222,7 +247,12 @@ class _HomeState extends State<Home> {
                           ],
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(24),
+                          padding: EdgeInsets.only(
+                            left: 12,
+                            top: 24,
+                            right: 12,
+                            bottom: 24,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -619,25 +649,6 @@ class _HomeState extends State<Home> {
           ),
         ),
       ),
-      // bottomNavigationBar: Container(
-      //   decoration: BoxDecoration(
-      //     color: Colors.white.withOpacity(0.95),
-      //     border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
-      //   ),
-      //   child: Padding(
-      //     padding: EdgeInsets.symmetric(vertical: 12),
-      //     child: Row(
-      //       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      //       children: [
-      //         _buildNavItem(Icons.home, 'Home', true),
-      //         _buildNavItem(Icons.access_time, 'Attendance', false),
-      //         _buildNavItem(Icons.calendar_today, 'Leave', false),
-      //         _buildNavItem(Icons.attach_money, 'Payroll', false),
-      //         _buildNavItem(Icons.person, 'Profile', false),
-      //       ],
-      //     ),
-      //   ),
-      // ),
     );
   }
 

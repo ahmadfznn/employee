@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
+import 'package:mobile/auth/login.dart';
+import 'package:mobile/service/auth_service.dart';
+
 class AppIcons {
   static const IconData arrowLeft = Icons.arrow_back_rounded;
   static const IconData user = Icons.person_rounded;
@@ -12,6 +15,7 @@ class AppIcons {
   static const IconData info = Icons.info_outline_rounded;
   static const IconData chevronRight = Icons.chevron_right_rounded;
   static const IconData settings = Icons.settings_rounded;
+  static const IconData logout = Icons.logout_rounded;
 }
 
 class Settings extends StatefulWidget {
@@ -27,6 +31,8 @@ class _SettingsState extends State<Settings> {
   final String _selectedLanguage = 'English';
 
   late Timer _timer;
+  // Inisialisasi AuthService
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -50,6 +56,48 @@ class _SettingsState extends State<Settings> {
     setState(() {
       _darkMode = !_darkMode;
     });
+  }
+
+  // Fungsi untuk handle proses logout
+  Future<void> _handleLogout() async {
+    // Tampilkan dialog konfirmasi (opsional tapi disarankan)
+    final confirmLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Logout'),
+          content: const Text('Apakah Anda yakin ingin keluar dari akun?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmLogout == true) {
+      // Panggil fungsi deleteAuthData dari AuthService
+      await _authService.deleteAuthData();
+
+      // Pastikan widget masih mounted sebelum navigasi
+      if (mounted) {
+        // Arahkan user ke halaman Login dan hapus semua route sebelumnya
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const Login()),
+          (Route<dynamic> route) => false, // Hapus semua route di stack
+        );
+      }
+    }
   }
 
   // Helper widget for the custom toggle switch
@@ -242,7 +290,7 @@ class _SettingsState extends State<Settings> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Profile Header Card
                     Container(
@@ -552,6 +600,83 @@ class _SettingsState extends State<Settings> {
                       );
                     }).toList(),
 
+                    // --- TOMBOL LOGOUT BARU DIMULAI DI SINI ---
+                    const SizedBox(height: 24), // Spasi sebelum tombol logout
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                        border: Border.all(color: Colors.blueGrey.shade100),
+                      ),
+                      child: Material(
+                        // Wrap with Material to get InkWell splash effect
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _handleLogout, // Panggil fungsi logout
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors
+                                            .red
+                                            .shade100, // Warna merah untuk logout
+                                        Colors.red.shade200,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    AppIcons.logout, // Ikon logout
+                                    color: Colors.red.shade600,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors
+                                          .red
+                                          .shade800, // Warna teks merah
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  AppIcons.chevronRight,
+                                  color:
+                                      Colors.red.shade400, // Warna ikon merah
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // --- TOMBOL LOGOUT BARU BERAKHIR DI SINI ---
+
                     // Footer Info
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -577,9 +702,7 @@ class _SettingsState extends State<Settings> {
                         ],
                       ),
                     ),
-                    const SizedBox(
-                      height: 80,
-                    ), // Padding for the bottom bar from layout.dart
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),

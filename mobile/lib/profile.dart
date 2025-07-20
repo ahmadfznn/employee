@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/service/auth_service.dart';
 import 'dart:async';
 
 import 'package:mobile/setting.dart';
@@ -52,6 +53,17 @@ class _Profile extends State<Profile> {
   DateTime _currentTime = DateTime.now();
   bool _isEditing = false;
   String? _editingField;
+  int? _userId;
+  String? _userName;
+  String? _email;
+  String? _phone;
+  String? _position;
+  String? _role;
+  int? _salary;
+  String? _photoUrl;
+  String? _address;
+  bool? _status;
+  bool _isLoading = true;
 
   Map<String, dynamic> _profileData = {
     'fullName': 'Alexander Rodriguez',
@@ -66,16 +78,16 @@ class _Profile extends State<Profile> {
         'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
   };
 
-  late Map<String, dynamic> _tempData; // Will hold data during editing
+  late Map<String, dynamic> _tempData;
 
   late Timer _timer;
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _tempData = Map.from(
-      _profileData,
-    ); // Initialize tempData with a copy of profileData
+    _loadUserData();
+    _tempData = Map.from(_profileData);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -91,6 +103,33 @@ class _Profile extends State<Profile> {
     super.dispose();
   }
 
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await _authService.getUserData();
+      if (mounted) {
+        setState(() {
+          _userId = userData?['id'];
+          _userName = userData?['name'];
+          _email = userData?['email'];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _userName = 'Error loading name';
+          _email = 'Error loading email';
+          _userId = null;
+        });
+        print('Error loading user data: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load user data: $e')));
+      }
+    }
+  }
+
   void _handleEdit(String field) {
     setState(() {
       _editingField = field;
@@ -100,7 +139,7 @@ class _Profile extends State<Profile> {
 
   void _handleSave() {
     setState(() {
-      _profileData = Map.from(_tempData); // Update profileData from tempData
+      _profileData = Map.from(_tempData);
       _isEditing = false;
       _editingField = null;
     });
@@ -108,9 +147,7 @@ class _Profile extends State<Profile> {
 
   void _handleCancel() {
     setState(() {
-      _tempData = Map.from(
-        _profileData,
-      ); // Revert tempData to original profileData
+      _tempData = Map.from(_profileData);
       _isEditing = false;
       _editingField = null;
     });
@@ -417,7 +454,7 @@ class _Profile extends State<Profile> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          '${_getYearsOfService()} of service',
+                                          _getYearsOfService(),
                                           style: TextStyle(
                                             color: Colors.purple.shade100,
                                             fontSize: 14,

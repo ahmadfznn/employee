@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:mobile/service/auth_service.dart';
+import 'package:mobile/service/leave_service.dart';
 import 'package:path/path.dart' as p;
 
 class Leave extends StatefulWidget {
@@ -68,6 +70,12 @@ class _Leave extends State<Leave> {
   LeaveFormData formData = LeaveFormData();
   bool isSubmitting = false;
   bool showSuccess = false;
+
+  final LeaveService _leaveService = LeaveService();
+  final AuthService _authService = AuthService();
+
+  List<LeaveRequest> _leaveRequests = [];
+  bool _isLoadingHistory = true;
 
   final List<Map<String, String>> leaveTypes = const [
     {'value': 'annual', 'label': 'Annual Leave', 'icon': '🏖️'},
@@ -218,12 +226,54 @@ class _Leave extends State<Leave> {
     return 0;
   }
 
+  Future<void> _fetchLeaveHistory() async {
+    setState(() {
+      _isLoadingHistory = true;
+    });
+
+    try {
+      final userData = await _authService.getUserData();
+      if (userData == null || userData['id'] == null) {
+        throw Exception('User data not found. Please log in again.');
+      }
+      final employeeId =
+          userData['id'] as int; // Ambil employee ID dari data user
+
+      final result = await _leaveService.getLeaveRequestsByEmployee(employeeId);
+
+      if (mounted) {
+        if (result['success']) {
+          setState(() {
+            _leaveRequests = result['leaveRequests'];
+          });
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          _leaveRequests = []; // Kosongkan jika gagal
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching leave history: $e')),
+        );
+        _leaveRequests = []; // Kosongkan jika error
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingHistory = false;
+        });
+      }
+    }
+  }
+
   Future<void> handleSubmit() async {
     if (formData.leaveType == null ||
         formData.startDate == null ||
         formData.endDate == null ||
         formData.reason.isEmpty) {
-      // You might want to show a SnackBar or AlertDialog here to inform the user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all required fields.'),
@@ -237,19 +287,64 @@ class _Leave extends State<Leave> {
       isSubmitting = true;
     });
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final userData = await _authService.getUserData();
+      if (userData == null || userData['id'] == null) {
+        throw Exception('User data not found. Please log in again.');
+      }
+      final employeeId = userData['id'];
+
+      final result = await _leaveService.createLeaveRequest(
+        employeeId: employeeId,
+        leaveType: formData.leaveType!,
+        startDate: formData.startDate!,
+        endDate: formData.endDate!,
+        reason: formData.reason,
+      );
+
+      if (mounted) {
+        if (result['success']) {
+          setState(() {
+            showSuccess = true;
+            formData.reset();
+          });
+          _fetchLeaveHistory();
+
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                showSuccess = false;
+              });
+            }
+          });
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting leave request: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSubmitting = false;
+        });
+      }
+    }
 
     setState(() {
       isSubmitting = false;
       showSuccess = true;
-      formData.reset(); // Reset form data after successful submission
+      // formData.reset();
     });
 
-    // Hide success message after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        // Check if the widget is still in the tree
         setState(() {
           showSuccess = false;
         });
@@ -260,8 +355,7 @@ class _Leave extends State<Leave> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // Handled by the parent Layout's gradient
+      backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

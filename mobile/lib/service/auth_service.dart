@@ -1,12 +1,42 @@
-// lib/services/auth_service.dart (atau di mana pun kamu mau)
-import 'dart:convert'; // Untuk encode dan decode JSON
-import 'package:http/http.dart' as http; // Alias 'http' untuk kemudahan
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  // Ganti dengan alamat IP server kamu jika kamu jalankan di device fisik
-  // atau emulator lain. Untuk Android Emulator, '10.0.2.2' mengacu ke localhost host machine.
-  // Untuk iOS Simulator, 'localhost' atau '127.0.0.1' biasanya works.
-  final String _baseUrl = 'http://10.0.2.2:4000/api/auth';
+  final String _baseUrl = 'http://192.168.1.6:4000/api/auth';
+
+  static const String _authTokenKey = 'authToken';
+  static const String _userDataKey = 'userData';
+
+  Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_authTokenKey, token);
+  }
+
+  Future<void> _saveUserData(Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userDataKey, json.encode(userData));
+  }
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_authTokenKey);
+  }
+
+  Future<Map<String, dynamic>?> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userDataString = prefs.getString(_userDataKey);
+    if (userDataString != null) {
+      return json.decode(userDataString) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  Future<void> deleteAuthData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_authTokenKey);
+    await prefs.remove(_userDataKey);
+  }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$_baseUrl/login');
@@ -14,26 +44,35 @@ class AuthService {
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json', // Penting untuk mengirim JSON
-        },
+        headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'password': password}),
       );
 
-      // Check the status code
       if (response.statusCode == 200) {
-        // Login Sukses
-        // Server kamu kirim { message: "Login successful" }
-        return {
-          'success': true,
-          'message': json.decode(response.body)['message'],
-        };
+        final responseBody = json.decode(response.body);
+        final token = responseBody['token'];
+        final userData = responseBody['user'];
+
+        if (token != null && userData != null) {
+          await _saveToken(token);
+          await _saveUserData(userData);
+
+          return {
+            'success': true,
+            'message': responseBody['message'],
+            'token': token,
+            'user': userData,
+          };
+        } else {
+          return {
+            'success': false,
+            'message': 'Login successful, but token or user data not received.',
+          };
+        }
       } else if (response.statusCode == 400 || response.statusCode == 401) {
-        // Bad Request (validasi error) atau Unauthorized (email/password salah)
         final errorBody = json.decode(response.body);
         String errorMessage = errorBody['message'] ?? 'Unknown error occurred';
 
-        // Jika ada errors array (dari express-validator)
         if (errorBody['errors'] != null && errorBody['errors'] is List) {
           errorMessage = (errorBody['errors'] as List)
               .map((e) => e['msg'].toString())
@@ -42,14 +81,12 @@ class AuthService {
 
         return {'success': false, 'message': errorMessage};
       } else {
-        // Status code lainnya (misal 500 Internal Server Error)
         return {
           'success': false,
           'message': 'Failed to login: Server error ${response.statusCode}',
         };
       }
     } catch (e) {
-      // Error jaringan atau error lain sebelum respons diterima
       return {
         'success': false,
         'message':
