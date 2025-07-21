@@ -59,6 +59,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("admin", "manager", "employee"),
         defaultValue: "employee",
       },
+      department: {
+        type: DataTypes.STRING(50),
+        defaultValue: "IT",
+      },
       salary: {
         type: DataTypes.INTEGER,
         allowNull: false,

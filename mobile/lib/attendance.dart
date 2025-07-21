@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // For Timer
 
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
 class Attendance extends StatefulWidget {
   const Attendance({super.key});
 

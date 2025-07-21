@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
+import 'package:mobile/service/auth_service.dart';
+import 'package:mobile/service/payroll_service.dart';
+
 // Equivalent to lucide-react icons. Flutter uses MaterialIcons or CupertinoIcons.
 // For custom icons, you'd use a package like 'flutter_icons' or generate from SVG.
 // Here, I'm using standard MaterialIcons or similar names to represent them.
@@ -24,6 +27,34 @@ class AppIcons {
   static const IconData car = Icons.directions_car_rounded;
 }
 
+class PayrollRequest {
+  final String id;
+  final String employeeId;
+  final String month;
+  final double baseSalary;
+  final double bonus;
+  final double deductions;
+  final double totalSalary;
+  final String status;
+  final DateTime? paymentDate;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  const PayrollRequest({
+    required this.id,
+    required this.employeeId,
+    required this.month,
+    required this.baseSalary,
+    required this.bonus,
+    required this.deductions,
+    required this.totalSalary,
+    required this.status,
+    this.paymentDate,
+    this.createdAt,
+    this.updatedAt,
+  });
+}
+
 class Payroll extends StatefulWidget {
   const Payroll({super.key});
 
@@ -33,13 +64,18 @@ class Payroll extends StatefulWidget {
 
 class _Payroll extends State<Payroll> {
   DateTime _currentTime = DateTime.now();
-  int? _selectedSlipId; // Use nullable int for ID
+  String? _selectedSlipId;
+  bool _isLoadingPayrolls = true;
+  final AuthService _authService = AuthService();
+  final PayrollService _payrollService = PayrollService();
+  List<PayrollRequest> _payrollRequests = [];
 
   late Timer _timer;
 
   @override
   void initState() {
     super.initState();
+    _fetchPayrolls();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         // Check if the widget is still in the widget tree
@@ -137,6 +173,49 @@ class _Payroll extends State<Payroll> {
   String _formatCurrency(double amount) {
     final format = NumberFormat.currency(locale: 'en_US', symbol: '\$');
     return format.format(amount);
+  }
+
+  Future<void> _fetchPayrolls() async {
+    setState(() {
+      _isLoadingPayrolls = true;
+    });
+
+    try {
+      final userData = await _authService.getUserData();
+      if (userData == null || userData['id'] == null) {
+        throw Exception('User data not found. Please log in again.');
+      }
+      final employeeId = userData['id'];
+
+      final result = await _payrollService.getPayrollsByEmployee(employeeId);
+
+      if (mounted) {
+        if (result['success']) {
+          print(result);
+          setState(() {
+            _payrollRequests = result['payrolls'];
+          });
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          _payrollRequests = [];
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching payroll history: $e')),
+        );
+        _payrollRequests = [];
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPayrolls = false;
+        });
+      }
+    }
   }
 
   @override
@@ -718,7 +797,7 @@ class _Payroll extends State<Payroll> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        ..._payrollData.map(
+                        ..._payrollRequests.map(
                           (payroll) => Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _buildPayrollCard(payroll),
@@ -988,7 +1067,7 @@ class _Payroll extends State<Payroll> {
     );
   }
 
-  Widget _buildPayrollCard(Map<String, dynamic> payroll) {
+  Widget _buildPayrollCard(PayrollRequest payroll) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1035,7 +1114,7 @@ class _Payroll extends State<Payroll> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        payroll['month'],
+                        payroll.month,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1043,7 +1122,7 @@ class _Payroll extends State<Payroll> {
                         ),
                       ),
                       Text(
-                        payroll['period'],
+                        payroll.paymentDate!.year.toString(),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.blueGrey.shade500, // slate-500
@@ -1074,7 +1153,7 @@ class _Payroll extends State<Payroll> {
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
-                          payroll['status'],
+                          payroll.status,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1104,7 +1183,7 @@ class _Payroll extends State<Payroll> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatCurrency(payroll['netPay']),
+                    _formatCurrency(payroll.totalSalary),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1117,14 +1196,14 @@ class _Payroll extends State<Payroll> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Gross: ${_formatCurrency(_calculateTotalEarnings(payroll['baseSalary'], payroll['allowances']))}',
+                    'Gross: ${_formatCurrency(_calculateTotalEarnings(payroll.baseSalary, {}))}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blueGrey.shade500, // slate-500
                     ),
                   ),
                   Text(
-                    'Deductions: -${_formatCurrency(_calculateTotalDeductions(payroll['deductions']))}',
+                    'Deductions: -${_formatCurrency(_calculateTotalDeductions({}))}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blueGrey.shade500, // slate-500
@@ -1141,7 +1220,7 @@ class _Payroll extends State<Payroll> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     setState(() {
-                      _selectedSlipId = payroll['id'];
+                      _selectedSlipId = payroll.id;
                     });
                   },
                   style: ElevatedButton.styleFrom(

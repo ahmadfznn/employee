@@ -79,6 +79,7 @@ exports.login = async (req, res) => {
         photo_url: employee.photo_url,
         address: employee.address,
         status: employee.status,
+        created_at: employee.created_at
       }
     });
   } catch (error) {

@@ -62,6 +62,7 @@ module.exports = {
         password: passwordHash,
         position: positions[i],
         role: "employee",
+        department: "IT",
         salary: 5000000,
         photo_url: null,
         address: `Jl. ${employeeNames[i]} No. ${i + 1}, Jakarta`,
@@ -70,7 +71,7 @@ module.exports = {
         updated_at: new Date(),
       });
     }
-
+    
     const adminNames = ["Adi Wijaya", "Sarah Ananda"];
     for (let i = 0; i < 2; i++) {
       employees.push({
@@ -81,6 +82,7 @@ module.exports = {
         password: passwordHash,
         position: "Administrator",
         role: "admin",
+        department: "IT",
         salary: 6000000,
         photo_url: null,
         address: `Jl. ${adminNames[i]} No. ${i + 21}, Jakarta`,
@@ -89,7 +91,7 @@ module.exports = {
         updated_at: new Date(),
       });
     }
-
+    
     employees.push({
       id: uuidv4(),
       name: "Rudi Hartanto",
@@ -98,6 +100,7 @@ module.exports = {
       password: passwordHash,
       position: "General Manager",
       role: "manager",
+      department: "IT",
       salary: 10000000,
       photo_url: null,
       address: "Jl. Rudi Hartanto No. 23, Jakarta",
@@ -105,7 +108,7 @@ module.exports = {
       created_at: new Date(),
       updated_at: new Date(),
     });
-
+    
     await queryInterface.bulkInsert("employees", employees, {});
   },
 

@@ -49,7 +49,7 @@ module.exports = (sequelize, DataTypes) => {
       modelName: "Notification",
       tableName: "notifications",
       timestamps: true,
-      createdAt: "created_at",
+      createdAt: "created_at",  
       updatedAt: "updated_at",
     }
   );

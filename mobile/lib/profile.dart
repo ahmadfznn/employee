@@ -53,28 +53,17 @@ class _Profile extends State<Profile> {
   DateTime _currentTime = DateTime.now();
   bool _isEditing = false;
   String? _editingField;
-  int? _userId;
-  String? _userName;
-  String? _email;
-  String? _phone;
-  String? _position;
-  String? _role;
-  int? _salary;
-  String? _photoUrl;
-  String? _address;
-  bool? _status;
   bool _isLoading = true;
 
   Map<String, dynamic> _profileData = {
-    'fullName': 'Alexander Rodriguez',
-    'jobTitle': 'Senior Software Engineer',
-    'department': 'Engineering',
+    'name': 'Alexander Rodriguez',
+    'position': 'Senior Software Engineer',
+    'role': 'Engineering',
     'joinDate': '2022-03-15',
     'email': 'alex.rodriguez@company.com',
     'phone': '+1 (555) 123-4567',
     'address': '123 Tech Street, San Francisco, CA 94105',
-    'nik': '1234567890123456',
-    'profileImage':
+    'photoUrl':
         'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
   };
 
@@ -108,19 +97,38 @@ class _Profile extends State<Profile> {
       final userData = await _authService.getUserData();
       if (mounted) {
         setState(() {
-          _userId = userData?['id'];
-          _userName = userData?['name'];
-          _email = userData?['email'];
           _isLoading = false;
+          if (userData != null) {
+            _profileData['id'] = userData['id'];
+            _profileData['name'] = userData['name'] ?? 'Guest User';
+            _profileData['email'] = userData['email'] ?? 'guest@example.com';
+            _profileData['phone'] = userData['phone'] ?? '+1 (000) 000-0000';
+            _profileData['position'] = userData['position'] ?? 'Employee';
+            _profileData['role'] = userData['role'] ?? 'User';
+            _profileData['salary'] = userData['salary'];
+            _profileData['photoUrl'] =
+                userData['photo_url'] ??
+                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face';
+            _profileData['address'] = userData['address'] ?? 'N/A';
+            _profileData['status'] = userData['status'] ?? true;
+            _profileData['joinDate'] = userData['created_at'] ?? '2022-03-15';
+          } else {
+            print('No user data found in SharedPreferences.');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No user data found. Please login again.'),
+              ),
+            );
+          }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _userName = 'Error loading name';
-          _email = 'Error loading email';
-          _userId = null;
+          _profileData['name'] = 'Error loading name';
+          _profileData['email'] = 'Error loading email';
+          _profileData['id'] = null;
         });
         print('Error loading user data: $e');
         ScaffoldMessenger.of(
@@ -176,11 +184,10 @@ class _Profile extends State<Profile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF5FF), // from-purple-50
+      backgroundColor: const Color(0xFFFAF5FF),
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.8),
@@ -219,9 +226,7 @@ class _Profile extends State<Profile> {
                                 ),
                               ],
                               image: DecorationImage(
-                                image: NetworkImage(
-                                  _profileData['profileImage'],
-                                ),
+                                image: NetworkImage(_profileData['photoUrl']),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -279,8 +284,8 @@ class _Profile extends State<Profile> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.blueGrey.shade100, // from-slate-100
-                            Colors.blueGrey.shade200, // to-slate-200
+                            Colors.blueGrey.shade100,
+                            Colors.blueGrey.shade200,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -297,21 +302,20 @@ class _Profile extends State<Profile> {
                 ],
               ),
             ),
-            // Main Content
+
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile Header Card
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.purple.shade400, // from-purple-400
-                            Colors.pink.shade400, // via-pink-400
-                            Colors.blue.shade400, // to-blue-400
+                            Colors.purple.shade400,
+                            Colors.pink.shade400,
+                            Colors.blue.shade400,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -375,7 +379,7 @@ class _Profile extends State<Profile> {
                                       ],
                                       image: DecorationImage(
                                         image: NetworkImage(
-                                          _profileData['profileImage'],
+                                          _profileData['photoUrl'],
                                         ),
                                         fit: BoxFit.cover,
                                       ),
@@ -385,9 +389,7 @@ class _Profile extends State<Profile> {
                                     bottom: -8,
                                     right: -8,
                                     child: InkWell(
-                                      onTap: () {
-                                        // Handle change profile image
-                                      },
+                                      onTap: () {},
                                       borderRadius: BorderRadius.circular(99),
                                       child: Container(
                                         width: 32,
@@ -421,7 +423,7 @@ class _Profile extends State<Profile> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _profileData['fullName'],
+                                      _profileData['name'],
                                       style: const TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
@@ -430,14 +432,14 @@ class _Profile extends State<Profile> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      _profileData['jobTitle'],
+                                      _profileData['position'],
                                       style: TextStyle(
                                         color: Colors.purple.shade100,
                                         fontSize: 18,
                                       ),
                                     ),
                                     Text(
-                                      _profileData['department'],
+                                      _profileData['role'],
                                       style: TextStyle(
                                         color: Colors.purple.shade100
                                             .withOpacity(0.8),
@@ -472,7 +474,6 @@ class _Profile extends State<Profile> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Contact Information
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -525,7 +526,6 @@ class _Profile extends State<Profile> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Work Information
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -551,16 +551,16 @@ class _Profile extends State<Profile> {
                         _buildInfoCard(
                           icon: AppIcons.user,
                           title: 'Job Title',
-                          value: _profileData['jobTitle'],
-                          field: 'jobTitle',
+                          value: _profileData['position'],
+                          field: 'position',
                           editable: true,
                         ),
                         const SizedBox(height: 16),
                         _buildInfoCard(
                           icon: AppIcons.building,
                           title: 'Department',
-                          value: _profileData['department'],
-                          field: 'department',
+                          value: _profileData['role'],
+                          field: 'role',
                           editable: true,
                         ),
                         const SizedBox(height: 16),
@@ -575,7 +575,6 @@ class _Profile extends State<Profile> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Government ID
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -598,22 +597,21 @@ class _Profile extends State<Profile> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _buildInfoCard(
-                          icon: AppIcons.creditCard,
-                          title: 'NIK (National ID)',
-                          value: _profileData['nik'].replaceAllMapped(
-                            RegExp(r'(\d{4})(\d{4})(\d{4})(\d{4})'),
-                            (Match m) => '${m[1]} ${m[2]} ${m[3]} ${m[4]}',
-                          ),
-                          field: 'nik',
-                          editable: true,
-                          type: TextInputType.number,
-                        ),
+                        // _buildInfoCard(
+                        //   icon: AppIcons.creditCard,
+                        //   title: 'NIK (National ID)',
+                        //   value: _profileData['nik'].replaceAllMapped(
+                        //     RegExp(r'(\d{4})(\d{4})(\d{4})(\d{4})'),
+                        //     (Match m) => '${m[1]} ${m[2]} ${m[3]} ${m[4]}',
+                        //   ),
+                        //   field: 'nik',
+                        //   editable: true,
+                        //   type: TextInputType.number,
+                        // ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    // Quick Stats
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.7),
@@ -650,8 +648,8 @@ class _Profile extends State<Profile> {
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        Colors.green.shade100, // from-green-100
-                                        Colors.teal.shade100, // to-teal-100
+                                        Colors.green.shade100,
+                                        Colors.teal.shade100,
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -692,8 +690,8 @@ class _Profile extends State<Profile> {
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        Colors.blue.shade100, // from-blue-100
-                                        Colors.purple.shade100, // to-purple-100
+                                        Colors.blue.shade100,
+                                        Colors.purple.shade100,
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -734,7 +732,6 @@ class _Profile extends State<Profile> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Edit Profile Button
                     if (!_isEditing)
                       SizedBox(
                         width: double.infinity,
@@ -746,8 +743,7 @@ class _Profile extends State<Profile> {
                           },
                           style:
                               ElevatedButton.styleFrom(
-                                backgroundColor: Colors
-                                    .transparent, // Transparent to use gradient
+                                backgroundColor: Colors.transparent,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
@@ -798,7 +794,7 @@ class _Profile extends State<Profile> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 80), // Padding for the bottom
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -809,7 +805,6 @@ class _Profile extends State<Profile> {
     );
   }
 
-  // Helper Widget for Info Cards
   Widget _buildInfoCard({
     required IconData icon,
     required String title,
@@ -822,7 +817,6 @@ class _Profile extends State<Profile> {
       text: _tempData[field].toString(),
     );
 
-    // Listener to update _tempData as text changes
     controller.addListener(() {
       _tempData[field] = controller.text;
     });
@@ -842,10 +836,8 @@ class _Profile extends State<Profile> {
         ],
         border: Border.all(
           color: _editingField == field
-              ? Colors
-                    .purple
-                    .shade300 // ring-2 ring-purple-300
-              : Colors.white.withOpacity(0.2), // border-white/20
+              ? Colors.purple.shade300
+              : Colors.white.withOpacity(0.2),
           width: _editingField == field ? 2 : 1,
         ),
       ),
@@ -861,10 +853,7 @@ class _Profile extends State<Profile> {
             height: 48,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Colors.purple.shade100, // from-purple-100
-                  Colors.pink.shade100, // to-pink-100
-                ],
+                colors: [Colors.purple.shade100, Colors.pink.shade100],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -882,7 +871,7 @@ class _Profile extends State<Profile> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.blueGrey.shade600, // slate-600
+                    color: Colors.blueGrey.shade600,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -930,8 +919,7 @@ class _Profile extends State<Profile> {
                                 onPressed: _handleSave,
                                 style:
                                     ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.transparent, // For gradient
+                                      backgroundColor: Colors.transparent,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -979,8 +967,7 @@ class _Profile extends State<Profile> {
                                 onPressed: _handleCancel,
                                 style:
                                     ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.transparent, // For gradient
+                                      backgroundColor: Colors.transparent,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -1033,7 +1020,7 @@ class _Profile extends State<Profile> {
                           color: Colors.blueGrey.shade800,
                           fontWeight: FontWeight.w500,
                           fontSize: 16,
-                          height: 1.5, // leading-relaxed
+                          height: 1.5,
                         ),
                       ),
               ],
@@ -1048,10 +1035,7 @@ class _Profile extends State<Profile> {
                 height: 32,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade100, // from-blue-100
-                      Colors.purple.shade100, // to-purple-100
-                    ],
+                    colors: [Colors.blue.shade100, Colors.purple.shade100],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
