@@ -19,7 +19,7 @@ class PayrollService {
   }
 
   Future<Map<String, dynamic>> getPayrollsByEmployee(String employeeId) async {
-    final url = Uri.parse('$_baseUrl/employees/$employeeId/payrolls');
+    final url = Uri.parse('$_baseUrl/payroll/employee/$employeeId');
     final headers = await _getAuthHeaders();
 
     try {
@@ -27,6 +27,7 @@ class PayrollService {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+        print(responseBody);
         List<Payroll> payrolls = (responseBody['payrolls'] as List)
             .map((json) => Payroll.fromJson(json))
             .toList();

@@ -25,7 +25,7 @@ class LeaveService {
     required DateTime endDate,
     required String reason,
   }) async {
-    final url = Uri.parse('$_baseUrl/leave-requests');
+    final url = Uri.parse('$_baseUrl/leave-request');
     final headers = await _getAuthHeaders();
 
     try {
@@ -65,9 +65,9 @@ class LeaveService {
   }
 
   Future<Map<String, dynamic>> getLeaveRequestsByEmployee(
-    int employeeId,
+    String employeeId,
   ) async {
-    final url = Uri.parse('$_baseUrl/employees/$employeeId/leave-requests');
+    final url = Uri.parse('$_baseUrl/leave-request/employee/$employeeId');
     final headers = await _getAuthHeaders();
 
     try {

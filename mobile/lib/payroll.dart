@@ -4,10 +4,8 @@ import 'dart:async';
 
 import 'package:mobile/service/auth_service.dart';
 import 'package:mobile/service/payroll_service.dart';
+import 'package:mobile/models/payroll_model.dart' as PayrollModel;
 
-// Equivalent to lucide-react icons. Flutter uses MaterialIcons or CupertinoIcons.
-// For custom icons, you'd use a package like 'flutter_icons' or generate from SVG.
-// Here, I'm using standard MaterialIcons or similar names to represent them.
 class AppIcons {
   static const IconData home = Icons.home_rounded;
   static const IconData clock = Icons.access_time_rounded;
@@ -27,34 +25,6 @@ class AppIcons {
   static const IconData car = Icons.directions_car_rounded;
 }
 
-class PayrollRequest {
-  final String id;
-  final String employeeId;
-  final String month;
-  final double baseSalary;
-  final double bonus;
-  final double deductions;
-  final double totalSalary;
-  final String status;
-  final DateTime? paymentDate;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-
-  const PayrollRequest({
-    required this.id,
-    required this.employeeId,
-    required this.month,
-    required this.baseSalary,
-    required this.bonus,
-    required this.deductions,
-    required this.totalSalary,
-    required this.status,
-    this.paymentDate,
-    this.createdAt,
-    this.updatedAt,
-  });
-}
-
 class Payroll extends StatefulWidget {
   const Payroll({super.key});
 
@@ -68,7 +38,7 @@ class _Payroll extends State<Payroll> {
   bool _isLoadingPayrolls = true;
   final AuthService _authService = AuthService();
   final PayrollService _payrollService = PayrollService();
-  List<PayrollRequest> _payrollRequests = [];
+  List<PayrollModel.Payroll> _payrollRequests = [];
 
   late Timer _timer;
 
@@ -78,7 +48,6 @@ class _Payroll extends State<Payroll> {
     _fetchPayrolls();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        // Check if the widget is still in the widget tree
         setState(() {
           _currentTime = DateTime.now();
         });
@@ -191,7 +160,6 @@ class _Payroll extends State<Payroll> {
 
       if (mounted) {
         if (result['success']) {
-          print(result);
           setState(() {
             _payrollRequests = result['payrolls'];
           });
@@ -1067,7 +1035,7 @@ class _Payroll extends State<Payroll> {
     );
   }
 
-  Widget _buildPayrollCard(PayrollRequest payroll) {
+  Widget _buildPayrollCard(PayrollModel.Payroll payroll) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1122,10 +1090,10 @@ class _Payroll extends State<Payroll> {
                         ),
                       ),
                       Text(
-                        payroll.paymentDate!.year.toString(),
+                        payroll.paymentDate?.year.toString() ?? 'N/A',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.blueGrey.shade500, // slate-500
+                          color: Colors.blueGrey.shade500,
                         ),
                       ),
                     ],

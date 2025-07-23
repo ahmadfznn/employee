@@ -124,6 +124,7 @@ exports.getPayrollByEmployee = async (req, res) => {
       include: [
         {
           model: Employee,
+          as: 'employee',
           attributes: ["name", "email", "position"],
         },
       ],

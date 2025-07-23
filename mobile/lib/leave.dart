@@ -185,13 +185,11 @@ class _Leave extends State<Leave> {
       setState(() {
         if (isStartDate) {
           formData.startDate = picked;
-          // Ensure end date is not before start date
           if (formData.endDate != null && formData.endDate!.isBefore(picked)) {
             formData.endDate = picked;
           }
         } else {
           formData.endDate = picked;
-          // Ensure start date is not after end date
           if (formData.startDate != null &&
               formData.startDate!.isAfter(picked)) {
             formData.startDate = picked;
@@ -211,9 +209,7 @@ class _Leave extends State<Leave> {
       setState(() {
         formData.attachment = File(result.files.single.path!);
       });
-    } else {
-      // User canceled the picker
-    }
+    } else {}
   }
 
   int calculateDays() {
@@ -221,7 +217,7 @@ class _Leave extends State<Leave> {
       final start = formData.startDate!;
       final end = formData.endDate!;
       final diff = end.difference(start).inDays;
-      return diff >= 0 ? diff + 1 : 0; // +1 to include start day
+      return diff >= 0 ? diff + 1 : 0;
     }
     return 0;
   }
@@ -236,8 +232,7 @@ class _Leave extends State<Leave> {
       if (userData == null || userData['id'] == null) {
         throw Exception('User data not found. Please log in again.');
       }
-      final employeeId =
-          userData['id'] as int; // Ambil employee ID dari data user
+      final employeeId = userData['id'];
 
       final result = await _leaveService.getLeaveRequestsByEmployee(employeeId);
 
@@ -250,7 +245,7 @@ class _Leave extends State<Leave> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(result['message'])));
-          _leaveRequests = []; // Kosongkan jika gagal
+          _leaveRequests = [];
         }
       }
     } catch (e) {
@@ -258,7 +253,7 @@ class _Leave extends State<Leave> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error fetching leave history: $e')),
         );
-        _leaveRequests = []; // Kosongkan jika error
+        _leaveRequests = [];
       }
     } finally {
       if (mounted) {

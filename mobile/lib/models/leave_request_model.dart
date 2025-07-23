@@ -1,6 +1,6 @@
 class LeaveRequest {
   final int id;
-  final int employeeId;
+  final String employeeId;
   final String leaveType;
   final DateTime startDate;
   final DateTime endDate;

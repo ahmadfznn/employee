@@ -26,18 +26,40 @@ class Payroll {
   });
 
   factory Payroll.fromJson(Map<String, dynamic> json) {
+    double _parseDouble(dynamic value) {
+      if (value is num) {
+        return value.toDouble();
+      } else if (value is String) {
+        return double.tryParse(value) ?? 0.0;
+      }
+      return 0.0;
+    }
+
+    DateTime? _parseDateTime(dynamic value) {
+      if (value == null) {
+        return null;
+      }
+      if (value is String && value.isEmpty) {
+        return null;
+      }
+      try {
+        return DateTime.parse(value as String);
+      } catch (e) {
+        print('Error parsing date: $value - $e');
+        return null;
+      }
+    }
+
     return Payroll(
       id: json['id'] as String,
       employeeId: json['employee_id'] as String,
       month: json['month'] as String,
-      baseSalary: (json['base_salary'] as num).toDouble(),
-      bonus: (json['bonus'] as num).toDouble(),
-      deductions: (json['deductions'] as num).toDouble(),
-      totalSalary: (json['total_salary'] as num).toDouble(),
+      baseSalary: _parseDouble(json['base_salary']),
+      bonus: _parseDouble(json['bonus']),
+      deductions: _parseDouble(json['deductions']),
+      totalSalary: _parseDouble(json['total_salary']),
       status: json['status'] as String,
-      paymentDate: json['payment_date'] != null
-          ? DateTime.parse(json['payment_date'] as String)
-          : null,
+      paymentDate: _parseDateTime(json['payment_date']),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // For Timer
+import 'dart:async';
+// ignore: library_prefixes
+import 'package:mobile/models/attendance_model.dart' as AttendanceModel;
+import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:mobile/service/attendance_service.dart';
+import 'package:mobile/service/auth_service.dart';
 
 class Attendance extends StatefulWidget {
   const Attendance({super.key});
@@ -10,11 +16,18 @@ class Attendance extends StatefulWidget {
 
 class _Attendance extends State<Attendance> {
   DateTime _currentTime = DateTime.now();
+  AttendanceModel.Attendance? _currentAttendance;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  List<AttendanceModel.Attendance> _attendanceHistory = [];
+
+  final AttendanceService _attendanceService = AttendanceService();
+  final AuthService _authService = AuthService();
+
   bool _isCheckedIn = true;
   bool _showCamera = false;
-  // DateTime _selectedDate = DateTime.now(); // Not directly used in the current UI logic for calendar
-  String _viewMode = 'timeline'; // 'timeline' or 'calendar'
-
+  String _viewMode = 'timeline';
   late Timer _timer;
 
   @override
@@ -25,6 +38,9 @@ class _Attendance extends State<Attendance> {
         _currentTime = DateTime.now();
       });
     });
+
+    _fetchAttendanceHistory();
+    _checkCurrentAttendanceStatus();
   }
 
   @override
@@ -33,26 +49,253 @@ class _Attendance extends State<Attendance> {
     super.dispose();
   }
 
-  void _handleCheckInOut() {
-    if (!_isCheckedIn) {
-      setState(() {
-        _showCamera = true;
-      });
-    } else {
-      setState(() {
-        _isCheckedIn = false;
-      });
+  Future<void> _fetchAttendanceHistory() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final userData = await _authService.getUserData();
+      if (userData == null) {
+        throw Exception('Employee ID not found. Please log in.');
+      }
+
+      final result = await _attendanceService.getAttendanceByEmployee(
+        userData['id'],
+      );
+
+      if (mounted) {
+        if (result['success']) {
+          setState(() {
+            _attendanceHistory =
+                result['attendances'] as List<AttendanceModel.Attendance>;
+          });
+        } else {
+          setState(() {
+            _errorMessage = result['message'];
+            _attendanceHistory = [];
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error fetching attendance history: $e';
+          _attendanceHistory = [];
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  // --- Fungsi untuk Mengecek Status Absensi Hari Ini ---
+  Future<void> _checkCurrentAttendanceStatus() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final userData = await _authService.getUserData();
+      if (userData == null) {
+        throw Exception('Employee ID not found. Please log in.');
+      }
+
+      final result = await _attendanceService.getAttendanceByDate(
+        DateTime.now(),
+      );
+
+      if (mounted) {
+        if (result['success']) {
+          // Cari absensi untuk employee ini di hari ini
+          final todayAttendance =
+              (result['attendances'] as List<AttendanceModel.Attendance>)
+                  .firstWhere(
+                    (att) =>
+                        att.employeeId == userData['id'] &&
+                        att.date.year == DateTime.now().year &&
+                        att.date.month == DateTime.now().month &&
+                        att.date.day == DateTime.now().day,
+                    orElse: () => AttendanceModel.Attendance(
+                      id: '', // Dummy ID untuk menandakan tidak ada
+                      employeeId: userData['id'],
+                      date: DateTime.now(),
+                      status:
+                          '', // Status kosong jika tidak ada record hari ini
+                    ),
+                  );
+
+          if (todayAttendance.id.isNotEmpty) {
+            // Jika ada record hari ini
+            setState(() {
+              _currentAttendance = todayAttendance;
+              // Cek status check-in/out berdasarkan checkOut time
+              _isCheckedIn =
+                  _currentAttendance!.checkIn != null &&
+                  _currentAttendance!.checkOut == null;
+            });
+          } else {
+            // Jika tidak ada record hari ini
+            setState(() {
+              _currentAttendance = null;
+              _isCheckedIn = false;
+            });
+          }
+        } else {
+          // Jika tidak ada record absensi untuk tanggal ini
+          setState(() {
+            _currentAttendance = null;
+            _isCheckedIn = false;
+            _errorMessage = result['message'];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error checking daily attendance: $e';
+          _currentAttendance = null;
+          _isCheckedIn = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // --- Fungsi untuk Handle Check In/Out ---
+  void _handleCheckInOut() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final userData = await _authService.getUserData();
+    if (userData == null) {
+      _errorMessage = 'Employee ID not found. Cannot perform action.';
+      ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
+        context,
+      ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (!_isCheckedIn) {
+      // Jika belum check-in, lakukan check-in
+      // _showCamera = true; // Jika kamu punya logic kamera, tampilkan kamera
+      // Untuk demo ini, langsung panggil API
+      final checkInTime = DateTime.now();
+      final result = await _attendanceService.createAttendance(
+        employeeId: userData['id'],
+        date: DateTime.now(),
+        checkInTime: checkInTime,
+        status: 'present', // Atau 'late' tergantung logika kamu
+      );
+
+      if (mounted) {
+        if (result['success']) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          // Update status lokal dan refresh data
+          _currentAttendance = result['attendance'];
+          _isCheckedIn = true;
+          _fetchAttendanceHistory(); // Refresh riwayat
+          _checkCurrentAttendanceStatus(); // Pastikan status hari ini update
+        } else {
+          _errorMessage = result['message'];
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
+      // Jika sudah check-in, lakukan check-out
+      if (_currentAttendance == null || _currentAttendance!.id.isEmpty) {
+        _errorMessage = 'No active check-in record found for today.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final checkOutTime = DateTime.now();
+      final result = await _attendanceService.updateAttendance(
+        attendanceId: _currentAttendance!.id,
+        checkOutTime: checkOutTime,
+        status:
+            'present', // Sesuaikan status jika ada logika 'late' saat checkout
+      );
+
+      if (mounted) {
+        if (result['success']) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          // Update status lokal dan refresh data
+          _currentAttendance = result['attendance'];
+          _isCheckedIn = false; // Sudah check-out
+          _fetchAttendanceHistory(); // Refresh riwayat
+          _checkCurrentAttendanceStatus(); // Pastikan status hari ini update
+        } else {
+          _errorMessage = result['message'];
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Fungsi handle camera capture (jika kamu implementasi kamera)
   void _handleCameraCapture() {
     setState(() {
-      _isCheckedIn = true;
+      // _isCheckedIn = true; // Ini akan diset oleh _handleCheckInOut() setelah API call
       _showCamera = false;
     });
   }
 
-  // Mock attendance data
+  String _calculateHours(DateTime? checkIn, DateTime? checkOut) {
+    if (checkIn == null || checkOut == null) {
+      return '0h 0m'; // Atau '-' atau 'N/A'
+    }
+    final duration = checkOut.difference(checkIn);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    return '${hours}h ${minutes}m';
+  }
+
   final List<Map<String, String>> _attendanceData = [
     {
       'date': '2024-07-19',
@@ -157,23 +400,19 @@ class _Attendance extends State<Attendance> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Handled by Container gradient
+      backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8FAFC), // slate-50
-              Color(0xFFEEF2FF), // blue-50
-            ],
+            colors: [Color(0xFFF8FAFC), Color(0xFFEEF2FF)],
           ),
         ),
         child: Stack(
           children: [
             Column(
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24.0,
@@ -204,7 +443,7 @@ class _Attendance extends State<Attendance> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B), // slate-800
+                                color: Color(0xFF1E293B),
                               ),
                             ),
                             Text(
@@ -216,7 +455,7 @@ class _Attendance extends State<Attendance> {
                               ),
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.blueGrey[500], // slate-500
+                                color: Colors.blueGrey[500],
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -235,7 +474,7 @@ class _Attendance extends State<Attendance> {
                                 fontSize: 24,
                                 fontFamily: 'monospace',
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blueGrey[700], // slate-700
+                                color: Colors.blueGrey[700],
                               ),
                             ),
                             Row(
@@ -244,7 +483,7 @@ class _Attendance extends State<Attendance> {
                                   Icons.location_on,
                                   size: 12,
                                   color: Colors.blueGrey[500],
-                                ), // w-3 h-3
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Office Building A',
@@ -262,7 +501,7 @@ class _Attendance extends State<Attendance> {
                     ),
                   ),
                 ),
-                // Main Content
+
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
@@ -272,7 +511,7 @@ class _Attendance extends State<Attendance> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Check-in/Check-out Card
+                        // --- Kartu Status Check-in/Out ---
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.all(24.0),
@@ -290,92 +529,115 @@ class _Attendance extends State<Attendance> {
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
                                     colors: [
-                                      Colors.green[500]!, // from-emerald-500
-                                      Colors.teal[600]!, // to-teal-600
+                                      Colors.green[500]!,
+                                      Colors.teal[600]!,
                                     ],
                                   )
                                 : LinearGradient(
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
                                     colors: [
-                                      Colors.blue[500]!, // from-blue-500
-                                      Colors.indigo[600]!, // to-indigo-600
+                                      Colors.blue[500]!,
+                                      Colors.indigo[600]!,
                                     ],
                                   ),
                           ),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                margin: const EdgeInsets.only(bottom: 16.0),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.2),
-                                ),
-                                child: const Icon(
-                                  Icons.access_time,
-                                  size: 40,
-                                  color: Colors.white,
-                                ), // w-10 h-10
-                              ),
-                              Text(
-                                _isCheckedIn
-                                    ? "You're Checked In!"
-                                    : "Ready to Check In?",
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _isCheckedIn
-                                    ? "Working for 3h 45m • Since 9:15 AM"
-                                    : "Tap to start your workday",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white.withOpacity(0.9),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _handleCheckInOut,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16.0,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16.0),
-                                    ),
-                                    shadowColor:
-                                        Colors.transparent, // No extra shadow
-                                    // React's transform hover:scale-105 is not directly mapped here but can be done with custom animations
+                          child: _isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
                                   ),
-                                  child: Text(
-                                    _isCheckedIn
-                                        ? '👋 Check Out'
-                                        : '🚀 Check In',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: _isCheckedIn
-                                          ? Colors.green[600]
-                                          : Colors.blue[600],
+                                )
+                              : Column(
+                                  children: [
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      margin: const EdgeInsets.only(
+                                        bottom: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withOpacity(0.2),
+                                      ),
+                                      child: const Icon(
+                                        Icons.access_time,
+                                        size: 40,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      _isCheckedIn
+                                          ? "You're Checked In!"
+                                          : "Ready to Check In?",
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _isCheckedIn
+                                          ? "Working for ${_currentAttendance?.checkIn != null ? DateFormat('HH:mm').format(_currentAttendance!.checkIn!) : 'N/A'}" // Tampilkan jam check-in
+                                          : "Tap to start your workday",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _handleCheckInOut, // Disable tombol saat loading
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16.0,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16.0,
+                                            ),
+                                          ),
+                                          shadowColor: Colors.transparent,
+                                        ),
+                                        child: Text(
+                                          _isCheckedIn
+                                              ? '👋 Check Out'
+                                              : '🚀 Check In',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: _isCheckedIn
+                                                ? Colors.green[600]
+                                                : Colors.blue[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (_errorMessage !=
+                                        null) // Tampilkan error di bawah tombol
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 10),
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                         const SizedBox(height: 24),
 
-                        // Weekly Stats
+                        // --- Bagian This Week (bisa dihitung dari _attendanceHistory) ---
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
@@ -390,120 +652,120 @@ class _Attendance extends State<Attendance> {
                             ],
                             border: Border.all(color: Colors.blueGrey[50]!),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'This Week',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1E293B), // slate-800
+                          child: _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'This Week',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    // TODO: Hitung _weeklyStats dari _attendanceHistory
+                                    // Contoh placeholder, kamu perlu mengimplementasikan logika penghitungan mingguan
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                '${_weeklyStats['present']}/${_weeklyStats['total']}',
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green[600],
+                                                ),
+                                              ),
+                                              const Text(
+                                                'Days Present',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                _weeklyStats['totalHours'],
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue[600],
+                                                ),
+                                              ),
+                                              const Text(
+                                                'Total Hours',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Weekly Attendance',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.blueGrey[600],
+                                              ),
+                                            ),
+                                            Text(
+                                              '${_weeklyStats['percentage']}%',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blueGrey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10.0,
+                                          ),
+                                          child: LinearProgressIndicator(
+                                            value:
+                                                _weeklyStats['percentage'] /
+                                                100,
+                                            backgroundColor:
+                                                Colors.blueGrey[200],
+                                            valueColor:
+                                                const AlwaysStoppedAnimation<
+                                                  Color
+                                                >(Color(0xFF10B981)),
+                                            minHeight: 8,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          '${_weeklyStats['present']}/${_weeklyStats['total']}',
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green[600],
-                                          ),
-                                        ),
-                                        const Text(
-                                          'Days Present',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Color(
-                                              0xFF64748B,
-                                            ), // slate-500
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          _weeklyStats['totalHours'],
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.blue[600],
-                                          ),
-                                        ),
-                                        const Text(
-                                          'Total Hours',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Color(
-                                              0xFF64748B,
-                                            ), // slate-500
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              // Progress Bar
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Weekly Attendance',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color:
-                                              Colors.blueGrey[600], // slate-600
-                                        ),
-                                      ),
-                                      Text(
-                                        '${_weeklyStats['percentage']}%',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color:
-                                              Colors.blueGrey[700], // slate-700
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10.0),
-                                    child: LinearProgressIndicator(
-                                      value: _weeklyStats['percentage'] / 100,
-                                      backgroundColor:
-                                          Colors.blueGrey[200], // slate-200
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                            Color(
-                                              0xFF10B981,
-                                            ), // emerald-500, not a gradient directly here
-                                          ),
-                                      minHeight: 8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
                         ),
                         const SizedBox(height: 24),
 
-                        // View Toggle
+                        // --- Tombol Timeline / Calendar (tetap sama) ---
                         Container(
                           padding: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
@@ -565,10 +827,6 @@ class _Attendance extends State<Attendance> {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8.0),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10.0,
-                                      horizontal: 16.0,
-                                    ),
                                   ),
                                   child: Text(
                                     'Calendar',
@@ -587,7 +845,7 @@ class _Attendance extends State<Attendance> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Attendance History
+                        // --- Recent Attendance List ---
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
@@ -614,31 +872,29 @@ class _Attendance extends State<Attendance> {
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E293B), // slate-800
+                                      color: Color(0xFF1E293B),
                                     ),
                                   ),
                                   Row(
                                     children: [
                                       IconButton(
-                                        onPressed: () {
-                                          // Handle previous month/week
-                                        },
+                                        onPressed:
+                                            () {}, // TODO: Implement previous date
                                         icon: Icon(
                                           Icons.chevron_left,
                                           size: 24,
                                           color: Colors.blueGrey[400],
-                                        ), // w-4 h-4
+                                        ),
                                         splashRadius: 20,
                                       ),
                                       IconButton(
-                                        onPressed: () {
-                                          // Handle next month/week
-                                        },
+                                        onPressed:
+                                            () {}, // TODO: Implement next date
                                         icon: Icon(
                                           Icons.chevron_right,
                                           size: 24,
                                           color: Colors.blueGrey[400],
-                                        ), // w-4 h-4
+                                        ),
                                         splashRadius: 20,
                                       ),
                                     ],
@@ -646,11 +902,26 @@ class _Attendance extends State<Attendance> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              _viewMode == 'timeline'
+                              _isLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : _attendanceHistory.isEmpty
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Text(
+                                          'No attendance records found.',
+                                        ),
+                                      ),
+                                    )
+                                  : _viewMode == 'timeline'
                                   ? Column(
-                                      children: _attendanceData.map((record) {
+                                      children: _attendanceHistory.map((
+                                        record,
+                                      ) {
                                         final colors = _getStatusColor(
-                                          record['status']!,
+                                          record.status,
                                         );
                                         return Container(
                                           margin: const EdgeInsets.only(
@@ -677,7 +948,7 @@ class _Attendance extends State<Attendance> {
                                                       color: colors['text'],
                                                     ),
                                                     child: _getStatusIcon(
-                                                      record['status']!,
+                                                      record.status,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 12),
@@ -687,23 +958,21 @@ class _Attendance extends State<Attendance> {
                                                             .start,
                                                     children: [
                                                       Text(
-                                                        DateTime.parse(
-                                                          record['date']!,
-                                                        ).toLocaleDateString(
-                                                          'en-US',
-                                                          month: 'short',
-                                                          day: 'numeric',
-                                                        ),
+                                                        DateFormat(
+                                                          'MMM d, yyyy',
+                                                        ).format(
+                                                          record.date,
+                                                        ), // Format tanggal
                                                         style: const TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
                                                           color: Color(
                                                             0xFF1E293B,
-                                                          ), // slate-800
+                                                          ),
                                                         ),
                                                       ),
                                                       Text(
-                                                        record['status']!,
+                                                        record.status,
                                                         style: TextStyle(
                                                           fontSize: 14,
                                                           color: colors['text'],
@@ -720,20 +989,21 @@ class _Attendance extends State<Attendance> {
                                                     CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
-                                                    '${record['checkIn']} - ${record['checkOut']}',
+                                                    '${record.checkIn != null ? DateFormat('h:mm a').format(record.checkIn!) : '-'} - ${record.checkOut != null ? DateFormat('h:mm a').format(record.checkOut!) : '-'}',
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       fontFamily: 'monospace',
-                                                      color: Colors
-                                                          .blueGrey[600], // slate-600
+                                                      color:
+                                                          Colors.blueGrey[600],
                                                     ),
                                                   ),
+                                                  // TODO: Hitung durasi jam kerja dari checkIn/checkOut
                                                   Text(
-                                                    record['hours']!,
+                                                    '${_calculateHours(record.checkIn, record.checkOut)}', // Contoh: 8h 45m
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      color: Colors
-                                                          .blueGrey[500], // slate-500
+                                                      color:
+                                                          Colors.blueGrey[500],
                                                     ),
                                                   ),
                                                 ],
@@ -743,62 +1013,13 @@ class _Attendance extends State<Attendance> {
                                         );
                                       }).toList(),
                                     )
-                                  : GridView.builder(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      gridDelegate:
-                                          const SliverGridDelegateWithFixedCrossAxisCount(
-                                            crossAxisCount: 7,
-                                            crossAxisSpacing: 8,
-                                            mainAxisSpacing: 8,
-                                            childAspectRatio:
-                                                1.0, // aspect-square
-                                          ),
-                                      itemCount:
-                                          35, // Typically 5 rows of 7 days
-                                      itemBuilder: (context, index) {
-                                        final dayNumber =
-                                            index - 5; // Offset for month start
-                                        final isCurrentMonth =
-                                            dayNumber > 0 && dayNumber <= 31;
-                                        final hasAttendance =
-                                            isCurrentMonth &&
-                                            (DateTime.now().millisecond % 3) !=
-                                                0; // Simplified random
-                                        final status = hasAttendance
-                                            ? [
-                                                'present',
-                                                'sick',
-                                                'leave',
-                                              ][dayNumber % 3]
-                                            : null;
-                                        final colors = status != null
-                                            ? _getStatusColor(status)
-                                            : {'bg': Colors.blueGrey[50]!};
-
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            color: colors['bg'],
-                                            borderRadius: BorderRadius.circular(
-                                              8.0,
-                                            ),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: isCurrentMonth
-                                              ? Text(
-                                                  '$dayNumber',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                    color:
-                                                        colors['text'] ??
-                                                        Colors.blueGrey[700],
-                                                  ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        );
-                                      },
+                                  : const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Text(
+                                          'Calendar view not implemented yet.',
+                                        ),
+                                      ),
                                     ),
                             ],
                           ),
@@ -809,7 +1030,7 @@ class _Attendance extends State<Attendance> {
                 ),
               ],
             ),
-            // Camera Modal (positioned above everything else)
+
             if (_showCamera)
               Positioned.fill(
                 child: Container(
@@ -817,8 +1038,7 @@ class _Attendance extends State<Attendance> {
                   alignment: Alignment.center,
                   padding: const EdgeInsets.all(24.0),
                   child: Material(
-                    color: Colors
-                        .transparent, // transparent to allow parent GestureDetector
+                    color: Colors.transparent,
                     child: Container(
                       padding: const EdgeInsets.all(24.0),
                       width: double.infinity,
@@ -835,23 +1055,23 @@ class _Attendance extends State<Attendance> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E293B), // slate-800
+                              color: Color(0xFF1E293B),
                             ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
                           Container(
                             width: double.infinity,
-                            height: 256, // h-64
+                            height: 256,
                             decoration: BoxDecoration(
-                              color: Colors.blueGrey[100], // slate-100
+                              color: Colors.blueGrey[100],
                               borderRadius: BorderRadius.circular(12.0),
                             ),
                             child: Icon(
                               Icons.camera_alt,
                               size: 64,
                               color: Colors.blueGrey[400],
-                            ), // w-16 h-16
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -879,7 +1099,7 @@ class _Attendance extends State<Attendance> {
                                     ),
                                     side: BorderSide(
                                       color: Colors.blueGrey[200]!,
-                                    ), // border-slate-200
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
@@ -889,7 +1109,7 @@ class _Attendance extends State<Attendance> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.blueGrey[600], // slate-600
+                                      color: Colors.blueGrey[600],
                                     ),
                                   ),
                                 ),
@@ -899,8 +1119,7 @@ class _Attendance extends State<Attendance> {
                                 child: ElevatedButton(
                                   onPressed: _handleCameraCapture,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.green[500], // bg-emerald-500
+                                    backgroundColor: Colors.green[500],
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 16.0,
                                       horizontal: 16.0,
@@ -940,10 +1159,7 @@ class _Attendance extends State<Attendance> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Handle navigation
-            if (label == 'Attendance') {
-              // It's already the active screen, maybe do nothing or refresh
-            }
+            if (label == 'Attendance') {}
           },
           splashColor: Colors.blue[100],
           borderRadius: BorderRadius.circular(8),
@@ -988,7 +1204,6 @@ class _Attendance extends State<Attendance> {
   }
 }
 
-// Extension to provide toLocaleDateString and toLocaleTimeString for DateTime
 extension DateTimeExtension on DateTime {
   String toLocaleDateString(
     String locale, {
@@ -996,7 +1211,6 @@ extension DateTimeExtension on DateTime {
     String? month,
     String? day,
   }) {
-    // This is a simplified implementation. For full locale support, consider intl package.
     String dateStr = '';
     if (weekday == 'long') {
       dateStr += '${_getWeekday(this.weekday)}, ';
@@ -1013,10 +1227,9 @@ extension DateTimeExtension on DateTime {
   }
 
   String toLocaleTimeString(String locale, {String? hour, String? minute}) {
-    // This is a simplified implementation. For full locale support, consider intl package.
     String period = this.hour < 12 ? 'AM' : 'PM';
     int displayHour = this.hour % 12;
-    if (displayHour == 0) displayHour = 12; // 12 AM/PM instead of 0 AM/PM
+    if (displayHour == 0) displayHour = 12;
 
     String minuteStr = this.minute.toString().padLeft(2, '0');
 
