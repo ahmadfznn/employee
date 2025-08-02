@@ -2,38 +2,35 @@ export default async function doLogin({
   data,
 }: {
   data: {
-    email: String;
-    password: String;
-    passwordConfirm: String;
+    email: string;
+    password: string;
   };
 }) {
   try {
-    console.log(data);
-    const result: Response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          // password_confirm: data.password,
-        }),
-      }
-    );
-
+    const result: Response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Type": "web",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+      }),
+    });
     const results = await result.json();
-    console.log(results);
-    if (result.status == 200) {
+
+    if (result.status === 200) {
       return { status: true, data: results };
     } else {
       return { status: false, data: results };
     }
   } catch (error) {
-    console.log(error);
-    return { status: false, data: error };
+    console.error(error);
+    return {
+      status: false,
+      data: { message: "Network error or server unavailable." },
+    };
   }
 }

@@ -1,8 +1,10 @@
+import { Employee } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface AuthContextType {
-  user: any;
+  user: Employee | null;
   loading: boolean;
+  setUser: (user: Employee | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );

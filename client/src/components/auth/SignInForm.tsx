@@ -3,7 +3,7 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons"; // Pastikan icons ini tersedia atau hapus jika tidak digunakan
 import doLogin from "@/services/doLogin";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,6 @@ export default function SignInForm() {
   const [data, setData] = useState({
     email: "",
     password: "",
-    passwordConfirm: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
@@ -31,20 +30,12 @@ export default function SignInForm() {
       setError(res.data?.message || "Invalid email or password");
     }
   };
+
   return (
-    <div className="flex flex-col flex-1 p-6 rounded-2xl sm:rounded-none sm:border-0 sm:p-8">
-      <div className="w-full max-w-md pt-10 mx-auto">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon />
-          Back to dashboard
-        </Link>
-      </div>
-      <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
+    <div className="flex items-center justify-center w-screen min-h-screen bg-gray-100 dark:bg-gray-950 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md mx-auto">
         <div>
-          <div className="mb-5 sm:mb-8">
+          <div className="mb-5 sm:mb-8 text-center">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign In
             </h1>
@@ -106,11 +97,7 @@ export default function SignInForm() {
               </div>
             </div>
             {/* Error message display */}
-            {error && (
-              <div className="mb-4 text-sm text-red-600">
-                {error}
-              </div>
-            )}
+            {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
             <form onSubmit={login}>
               <div className="space-y-6">
                 <div>
@@ -126,7 +113,7 @@ export default function SignInForm() {
                 </div>
                 <div>
                   <Label>
-                    Password <span className="text-error-500">*</span>{" "}
+                    Password <span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
                     <Input

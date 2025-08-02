@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:mobile/service/auth_service.dart';
 import 'dart:async';
 
-import 'package:mobile/setting.dart';
-
 class AppIcons {
   static const IconData home = Icons.home_rounded;
   static const IconData clock = Icons.access_time_rounded;
@@ -28,25 +26,6 @@ class Profile extends StatefulWidget {
 
   @override
   State<Profile> createState() => _Profile();
-}
-
-Route _goPage(Widget page) {
-  return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 500),
-    reverseTransitionDuration: const Duration(milliseconds: 500),
-    opaque: false,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(0.0, 1.0);
-      const end = Offset.zero;
-      final tween = Tween(
-        begin: begin,
-        end: end,
-      ).chain(CurveTween(curve: Curves.easeInOutExpo));
-      final offsetAnimation = animation.drive(tween);
-      return SlideTransition(position: offsetAnimation, child: child);
-    },
-  );
 }
 
 class _Profile extends State<Profile> {
@@ -188,121 +167,6 @@ class _Profile extends State<Profile> {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.blueGrey.shade100.withOpacity(0.5),
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                              image: DecorationImage(
-                                image: NetworkImage(_profileData['photoUrl']),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: -4,
-                            right: -4,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade500,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'My Profile 👤',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueGrey.shade800,
-                            ),
-                          ),
-                          Text(
-                            DateFormat.yMMMd().format(_currentTime),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.blueGrey.shade500,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(context, _goPage(Settings()));
-                    },
-                    borderRadius: BorderRadius.circular(99),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blueGrey.shade100,
-                            Colors.blueGrey.shade200,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        AppIcons.settings,
-                        color: Colors.blueGrey.shade700,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -378,8 +242,8 @@ class _Profile extends State<Profile> {
                                         ),
                                       ],
                                       image: DecorationImage(
-                                        image: NetworkImage(
-                                          _profileData['photoUrl'],
+                                        image: AssetImage(
+                                          'assets/img/ahmad.png',
                                         ),
                                         fit: BoxFit.cover,
                                       ),

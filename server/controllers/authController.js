@@ -50,6 +50,7 @@ exports.login = async (req, res) => {
     }
 
     const { email, password } = req.body;
+    const clientType = req.headers['x-client-type']; 
 
     const employee = await Employee.findOne({ where: { email } });
     if (!employee || !(await employee.checkPassword(password))) {
@@ -58,16 +59,17 @@ exports.login = async (req, res) => {
 
     const token = generateToken(employee);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    if (clientType === 'web') {
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
 
-    res.status(200).json({
+    const responseBody = {
       message: "Login successful",
-      token: token,
       user: {
         id: employee.id,
         email: employee.email,
@@ -81,8 +83,15 @@ exports.login = async (req, res) => {
         status: employee.status,
         created_at: employee.created_at
       }
-    });
-  } catch (error) {
+    };
+
+    if (clientType === 'mobile') {
+      responseBody.token = token;
+    }
+
+    res.status(200).json(responseBody);
+
+  } catch (error) { 
     res.status(500).json({ message: error.message });
   }
 };

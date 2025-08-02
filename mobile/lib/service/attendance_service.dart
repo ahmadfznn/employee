@@ -7,7 +7,6 @@ import 'package:geolocator/geolocator.dart';
 class AttendanceService {
   final String _baseUrl = 'http://192.168.1.6:4000/api';
   final AuthService _authService = AuthService();
-
   static const double _officeLatitude = -7.24574;
   static const double _officeLongitude = 108.170245;
   static const double _maxDistanceMeters = 50.0;
@@ -67,7 +66,7 @@ class AttendanceService {
     required DateTime checkInTime,
     String? reason,
   }) async {
-    final url = Uri.parse('$_baseUrl/attendances');
+    final url = Uri.parse('$_baseUrl/attendance');
     final headers = await _getAuthHeaders();
 
     LocationData? currentLocationData;

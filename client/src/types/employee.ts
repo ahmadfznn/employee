@@ -8,7 +8,12 @@ export type Employee = {
   position: string;
   role: "employee" | "admin" | "manager";
   salary: number;
-  address: string;
+  address?: {
+    country?: string;
+    cityState?: string;
+    postalCode?: string;
+    taxId?: string;
+  };
   status: "active" | "inactive";
   created_at?: string;
   updated_at?: string;

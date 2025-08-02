@@ -13,7 +13,7 @@ export const ProfileService = {
     return api.get("/me");
   },
 
-  async updateProfile(id: number, data: Record<string, unknown>) {
+  async updateProfile(id: string, data: Record<string, unknown>) {
     return api.put(`/employee/${id}`, data);
   },
 
