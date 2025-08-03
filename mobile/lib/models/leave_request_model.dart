@@ -1,11 +1,14 @@
+// leave_request_model.dart
+
 class LeaveRequest {
-  final int id;
+  final String id;
   final String employeeId;
   final String leaveType;
   final DateTime startDate;
   final DateTime endDate;
   final String reason;
   final String status;
+  final String? approvedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
   final Employee? employee;
@@ -18,6 +21,7 @@ class LeaveRequest {
     required this.endDate,
     required this.reason,
     required this.status,
+    this.approvedBy,
     required this.createdAt,
     required this.updatedAt,
     this.employee,
@@ -32,10 +36,14 @@ class LeaveRequest {
       endDate: DateTime.parse(json['end_date']),
       reason: json['reason'],
       status: json['status'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
-      employee: json['Employee'] != null
-          ? Employee.fromJson(json['Employee'])
+      // Perbaiki: approvedBy bisa null
+      approvedBy: json['approved_by'],
+      // UBAH NAMA KUNCI DI BAWAH INI
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+      // UBAH NAMA KUNCI DI BAWAH INI
+      employee: json['employee'] != null
+          ? Employee.fromJson(json['employee'])
           : null,
     );
   }
@@ -49,15 +57,16 @@ class LeaveRequest {
       'end_date': endDate.toIso8601String(),
       'reason': reason,
       'status': status,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'Employee': employee?.toJson(),
+      'approved_by': approvedBy,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'employee': employee?.toJson(),
     };
   }
 }
 
 class Employee {
-  final int id;
+  final String id;
   final String name;
   final String email;
   final String? position;

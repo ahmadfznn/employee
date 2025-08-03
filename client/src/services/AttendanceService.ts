@@ -10,7 +10,7 @@ const api = axios.create({
 
 export const AttendanceService = {
   async getAllAttendances() {
-    return api.get("/attendance/date/2025-03-09");
+    return api.get("/attendance/date/2025-08-03");
   },
 
   async getAttendanceById(id: string) {

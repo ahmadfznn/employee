@@ -90,7 +90,13 @@ exports.getLeaveRequestsByEmployee = async (req, res) => {
 
     const leaveRequests = await LeaveRequest.findAll({
       where: { employee_id },
-      include: [{ model: Employee, attributes: ["name", "email", "position"] }],
+      include: [
+        {
+          model: Employee,
+          attributes: ["id", "name", "email", "position"],
+          as: "employee",
+        },
+      ],
     });
 
     if (leaveRequests.length === 0) {

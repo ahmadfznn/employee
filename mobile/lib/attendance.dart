@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+
 // ignore: library_prefixes
 import 'package:mobile/models/attendance_model.dart' as AttendanceModel;
 import 'package:intl/intl.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:mobile/service/attendance_service.dart';
 import 'package:mobile/service/auth_service.dart';
 
@@ -100,7 +100,6 @@ class _Attendance extends State<Attendance> {
     }
   }
 
-  // --- Fungsi untuk Mengecek Status Absensi Hari Ini ---
   Future<void> _checkCurrentAttendanceStatus() async {
     setState(() {
       _isLoading = true;
@@ -119,7 +118,6 @@ class _Attendance extends State<Attendance> {
 
       if (mounted) {
         if (result['success']) {
-          // Cari absensi untuk employee ini di hari ini
           final todayAttendance =
               (result['attendances'] as List<AttendanceModel.Attendance>)
                   .firstWhere(
@@ -129,32 +127,28 @@ class _Attendance extends State<Attendance> {
                         att.date.month == DateTime.now().month &&
                         att.date.day == DateTime.now().day,
                     orElse: () => AttendanceModel.Attendance(
-                      id: '', // Dummy ID untuk menandakan tidak ada
+                      id: '',
                       employeeId: userData['id'],
                       date: DateTime.now(),
-                      status:
-                          '', // Status kosong jika tidak ada record hari ini
+                      status: '',
                     ),
                   );
 
           if (todayAttendance.id.isNotEmpty) {
-            // Jika ada record hari ini
             setState(() {
               _currentAttendance = todayAttendance;
-              // Cek status check-in/out berdasarkan checkOut time
+
               _isCheckedIn =
                   _currentAttendance!.checkIn != null &&
                   _currentAttendance!.checkOut == null;
             });
           } else {
-            // Jika tidak ada record hari ini
             setState(() {
               _currentAttendance = null;
               _isCheckedIn = false;
             });
           }
         } else {
-          // Jika tidak ada record absensi untuk tanggal ini
           setState(() {
             _currentAttendance = null;
             _isCheckedIn = false;
@@ -182,7 +176,6 @@ class _Attendance extends State<Attendance> {
     }
   }
 
-  // --- Fungsi untuk Handle Check In/Out ---
   void _handleCheckInOut() async {
     setState(() {
       _isLoading = true;
@@ -193,7 +186,6 @@ class _Attendance extends State<Attendance> {
     if (userData == null) {
       _errorMessage = 'Employee ID not found. Cannot perform action.';
       ScaffoldMessenger.of(
-        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
       setState(() {
@@ -203,15 +195,12 @@ class _Attendance extends State<Attendance> {
     }
 
     if (!_isCheckedIn) {
-      // Jika belum check-in, lakukan check-in
-      // _showCamera = true; // Jika kamu punya logic kamera, tampilkan kamera
-      // Untuk demo ini, langsung panggil API
       final checkInTime = DateTime.now();
       final result = await _attendanceService.createAttendance(
         employeeId: userData['id'],
         date: DateTime.now(),
         checkInTime: checkInTime,
-        status: 'present', // Atau 'late' tergantung logika kamu
+        status: 'present',
       );
 
       if (mounted) {
@@ -219,11 +208,11 @@ class _Attendance extends State<Attendance> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(result['message'])));
-          // Update status lokal dan refresh data
+
           _currentAttendance = result['attendance'];
           _isCheckedIn = true;
-          _fetchAttendanceHistory(); // Refresh riwayat
-          _checkCurrentAttendanceStatus(); // Pastikan status hari ini update
+          _fetchAttendanceHistory();
+          _checkCurrentAttendanceStatus();
         } else {
           _errorMessage = result['message'];
           ScaffoldMessenger.of(
@@ -235,7 +224,6 @@ class _Attendance extends State<Attendance> {
         });
       }
     } else {
-      // Jika sudah check-in, lakukan check-out
       if (_currentAttendance == null || _currentAttendance!.id.isEmpty) {
         _errorMessage = 'No active check-in record found for today.';
         ScaffoldMessenger.of(
@@ -251,8 +239,7 @@ class _Attendance extends State<Attendance> {
       final result = await _attendanceService.updateAttendance(
         attendanceId: _currentAttendance!.id,
         checkOutTime: checkOutTime,
-        status:
-            'present', // Sesuaikan status jika ada logika 'late' saat checkout
+        status: 'present',
       );
 
       if (mounted) {
@@ -260,11 +247,11 @@ class _Attendance extends State<Attendance> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(result['message'])));
-          // Update status lokal dan refresh data
+
           _currentAttendance = result['attendance'];
-          _isCheckedIn = false; // Sudah check-out
-          _fetchAttendanceHistory(); // Refresh riwayat
-          _checkCurrentAttendanceStatus(); // Pastikan status hari ini update
+          _isCheckedIn = false;
+          _fetchAttendanceHistory();
+          _checkCurrentAttendanceStatus();
         } else {
           _errorMessage = result['message'];
           ScaffoldMessenger.of(
@@ -278,75 +265,21 @@ class _Attendance extends State<Attendance> {
     }
   }
 
-  // Fungsi handle camera capture (jika kamu implementasi kamera)
   void _handleCameraCapture() {
     setState(() {
-      // _isCheckedIn = true; // Ini akan diset oleh _handleCheckInOut() setelah API call
       _showCamera = false;
     });
   }
 
   String _calculateHours(DateTime? checkIn, DateTime? checkOut) {
     if (checkIn == null || checkOut == null) {
-      return '0h 0m'; // Atau '-' atau 'N/A'
+      return '0h 0m';
     }
     final duration = checkOut.difference(checkIn);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     return '${hours}h ${minutes}m';
   }
-
-  final List<Map<String, String>> _attendanceData = [
-    {
-      'date': '2024-07-19',
-      'status': 'present',
-      'checkIn': '9:15 AM',
-      'checkOut': '6:20 PM',
-      'hours': '8h 45m',
-    },
-    {
-      'date': '2024-07-18',
-      'status': 'present',
-      'checkIn': '9:00 AM',
-      'checkOut': '6:15 PM',
-      'hours': '8h 45m',
-    },
-    {
-      'date': '2024-07-17',
-      'status': 'present',
-      'checkIn': '9:30 AM',
-      'checkOut': '6:30 PM',
-      'hours': '8h 30m',
-    },
-    {
-      'date': '2024-07-16',
-      'status': 'sick',
-      'checkIn': '-',
-      'checkOut': '-',
-      'hours': '0h',
-    },
-    {
-      'date': '2024-07-15',
-      'status': 'present',
-      'checkIn': '8:45 AM',
-      'checkOut': '6:00 PM',
-      'hours': '8h 45m',
-    },
-    {
-      'date': '2024-07-12',
-      'status': 'leave',
-      'checkIn': '-',
-      'checkOut': '-',
-      'hours': '0h',
-    },
-    {
-      'date': '2024-07-11',
-      'status': 'present',
-      'checkIn': '9:10 AM',
-      'checkOut': '6:25 PM',
-      'hours': '8h 45m',
-    },
-  ];
 
   Map<String, Color> _getStatusColor(String status) {
     switch (status) {
@@ -422,7 +355,6 @@ class _Attendance extends State<Attendance> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Kartu Status Check-in/Out ---
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.all(24.0),
@@ -490,7 +422,7 @@ class _Attendance extends State<Attendance> {
                                     const SizedBox(height: 8),
                                     Text(
                                       _isCheckedIn
-                                          ? "Working for ${_currentAttendance?.checkIn != null ? DateFormat('HH:mm').format(_currentAttendance!.checkIn!) : 'N/A'}" // Tampilkan jam check-in
+                                          ? "Working for ${_currentAttendance?.checkIn != null ? DateFormat('HH:mm').format(_currentAttendance!.checkIn!) : 'N/A'}"
                                           : "Tap to start your workday",
                                       style: TextStyle(
                                         fontSize: 14,
@@ -503,7 +435,7 @@ class _Attendance extends State<Attendance> {
                                       child: ElevatedButton(
                                         onPressed: _isLoading
                                             ? null
-                                            : _handleCheckInOut, // Disable tombol saat loading
+                                            : _handleCheckInOut,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
@@ -530,8 +462,7 @@ class _Attendance extends State<Attendance> {
                                         ),
                                       ),
                                     ),
-                                    if (_errorMessage !=
-                                        null) // Tampilkan error di bawah tombol
+                                    if (_errorMessage != null)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 10),
                                         child: Text(
@@ -548,7 +479,6 @@ class _Attendance extends State<Attendance> {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Bagian This Week (bisa dihitung dari _attendanceHistory) ---
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
@@ -577,8 +507,7 @@ class _Attendance extends State<Attendance> {
                                       ),
                                     ),
                                     const SizedBox(height: 16),
-                                    // TODO: Hitung _weeklyStats dari _attendanceHistory
-                                    // Contoh placeholder, kamu perlu mengimplementasikan logika penghitungan mingguan
+
                                     Row(
                                       children: [
                                         Expanded(
@@ -676,7 +605,6 @@ class _Attendance extends State<Attendance> {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Tombol Timeline / Calendar (tetap sama) ---
                         Container(
                           padding: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
@@ -756,7 +684,6 @@ class _Attendance extends State<Attendance> {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Recent Attendance List ---
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
@@ -789,8 +716,7 @@ class _Attendance extends State<Attendance> {
                                   Row(
                                     children: [
                                       IconButton(
-                                        onPressed:
-                                            () {}, // TODO: Implement previous date
+                                        onPressed: () {},
                                         icon: Icon(
                                           Icons.chevron_left,
                                           size: 24,
@@ -799,8 +725,7 @@ class _Attendance extends State<Attendance> {
                                         splashRadius: 20,
                                       ),
                                       IconButton(
-                                        onPressed:
-                                            () {}, // TODO: Implement next date
+                                        onPressed: () {},
                                         icon: Icon(
                                           Icons.chevron_right,
                                           size: 24,
@@ -871,9 +796,7 @@ class _Attendance extends State<Attendance> {
                                                       Text(
                                                         DateFormat(
                                                           'MMM d, yyyy',
-                                                        ).format(
-                                                          record.date,
-                                                        ), // Format tanggal
+                                                        ).format(record.date),
                                                         style: const TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
@@ -900,7 +823,7 @@ class _Attendance extends State<Attendance> {
                                                     CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
-                                                    '${record.checkIn != null ? DateFormat('h:mm a').format(record.checkIn!) : '-'} - ${record.checkOut != null ? DateFormat('h:mm a').format(record.checkOut!) : '-'}',
+                                                    '${record.checkIn != null ? DateFormat('h:mm a').format(record.checkIn!.toLocal()) : '-'} - ${record.checkOut != null ? DateFormat('h:mm a').format(record.checkOut!.toLocal()) : '-'}',
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       fontFamily: 'monospace',
@@ -908,9 +831,12 @@ class _Attendance extends State<Attendance> {
                                                           Colors.blueGrey[600],
                                                     ),
                                                   ),
-                                                  // TODO: Hitung durasi jam kerja dari checkIn/checkOut
+
                                                   Text(
-                                                    '${_calculateHours(record.checkIn, record.checkOut)}', // Contoh: 8h 45m
+                                                    _calculateHours(
+                                                      record.checkIn,
+                                                      record.checkOut,
+                                                    ),
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color:

@@ -141,7 +141,7 @@ class AttendanceService {
     required DateTime checkOutTime,
     required String status,
   }) async {
-    final url = Uri.parse('$_baseUrl/attendances/$attendanceId');
+    final url = Uri.parse('$_baseUrl/attendance/$attendanceId');
     final headers = await _getAuthHeaders();
 
     LocationData? currentLocationData;
@@ -205,7 +205,7 @@ class AttendanceService {
   Future<Map<String, dynamic>> getAttendanceByEmployee(
     String employeeId,
   ) async {
-    final url = Uri.parse('$_baseUrl/employees/$employeeId/attendances');
+    final url = Uri.parse('$_baseUrl/attendance/employee/$employeeId');
     final headers = await _getAuthHeaders();
 
     try {
@@ -213,6 +213,7 @@ class AttendanceService {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+
         List<Attendance> attendances = (responseBody['attendances'] as List)
             .map((json) => Attendance.fromJson(json))
             .toList();
@@ -241,9 +242,8 @@ class AttendanceService {
 
   Future<Map<String, dynamic>> getAttendanceByDate(DateTime date) async {
     final formattedDate = date.toIso8601String().split('T')[0];
-    final url = Uri.parse('$_baseUrl/attendances/date/$formattedDate');
+    final url = Uri.parse('$_baseUrl/attendance/date/$formattedDate');
     final headers = await _getAuthHeaders();
-
     try {
       final response = await http.get(url, headers: headers);
 

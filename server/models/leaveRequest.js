@@ -3,13 +3,11 @@ const { Model } = require("sequelize");
 const employee = require("./employee");
 module.exports = (sequelize, DataTypes) => {
   class LeaveRequest extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      LeaveRequest.belongsTo(models.Employee, {
+        foreignKey: "employee_id",
+        as: "employee",
+      });
     }
   }
   LeaveRequest.init(

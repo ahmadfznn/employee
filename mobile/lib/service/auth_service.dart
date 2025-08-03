@@ -44,7 +44,10 @@ class AuthService {
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-type': 'mobile',
+        },
         body: json.encode({'email': email, 'password': password}),
       );
 

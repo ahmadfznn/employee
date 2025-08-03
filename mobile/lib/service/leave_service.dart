@@ -75,6 +75,7 @@ class LeaveService {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+        print(responseBody);
         List<LeaveRequest> leaveRequests =
             (responseBody['leaveRequests'] as List)
                 .map((json) => LeaveRequest.fromJson(json))

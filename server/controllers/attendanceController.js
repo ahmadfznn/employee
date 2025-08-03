@@ -108,6 +108,7 @@ exports.getAttendanceByEmployee = async (req, res) => {
         {
           model: Employee,
           attributes: ["name", "email", "position"],
+          as: "employee",
         },
       ],
     });

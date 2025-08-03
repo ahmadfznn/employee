@@ -90,7 +90,7 @@ export default function BasicTable({
                           <Image
                             width={80}
                             height={80}
-                            src="/images/user/user-33.jpg"
+                            src="/images/user/owner.jpg"
                             alt="user"
                           />
                         </div>
@@ -99,6 +99,15 @@ export default function BasicTable({
                       ) : (field === "created at" || field === "updated at") &&
                         !isNaN(new Date(item[field]).getTime()) ? (
                         formatDate(item[field])
+                      ) : typeof item[field] === "object" &&
+                        item[field] !== null ? (
+                        item[field].address ? (
+                          item[field].address
+                        ) : item[field].latitude && item[field].longitude ? (
+                          `${item[field].latitude}, ${item[field].longitude}`
+                        ) : (
+                          JSON.stringify(item[field])
+                        )
                       ) : (
                         item[field]
                       )}

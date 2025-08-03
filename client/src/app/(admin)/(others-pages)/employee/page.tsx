@@ -23,7 +23,6 @@ import { useRouter } from "next/navigation";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Alert from "@/components/ui/alert/Alert";
-import { HiArrowDownOnSquare, HiDocument } from "react-icons/hi2";
 import { exportToExcel } from "@/services/FileService";
 
 const socket = io(process.env.NEXT_PUBLIC_URL, {

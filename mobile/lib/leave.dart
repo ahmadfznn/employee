@@ -28,7 +28,6 @@ class LeaveFormData {
     this.attachment,
   });
 
-  // Helper to reset the form
   void reset() {
     leaveType = null;
     startDate = null;
@@ -39,12 +38,12 @@ class LeaveFormData {
 }
 
 class LeaveRequest {
-  final int id;
+  final String id;
   final String type;
   final String icon;
   final String dates;
   final int days;
-  final String status; // 'approved', 'pending', 'rejected'
+  final String status;
   final String reason;
   final DateTime submittedDate;
   final String? approvedBy;
@@ -68,13 +67,15 @@ class LeaveRequest {
 
 class _Leave extends State<Leave> {
   LeaveFormData formData = LeaveFormData();
+  final _reasonController = TextEditingController();
+
   bool isSubmitting = false;
   bool showSuccess = false;
 
   final LeaveService _leaveService = LeaveService();
   final AuthService _authService = AuthService();
 
-  List<LeaveRequest> _leaveRequests = [];
+  List<LeaveRequest> leaveRequests = [];
   bool _isLoadingHistory = true;
 
   final List<Map<String, String>> leaveTypes = const [
@@ -85,52 +86,52 @@ class _Leave extends State<Leave> {
     {'value': 'personal', 'label': 'Personal Leave', 'icon': '👤'},
   ];
 
-  final List<LeaveRequest> leaveRequests = [
-    LeaveRequest(
-      id: 1,
-      type: 'Annual Leave',
-      icon: '🏖️',
-      dates: 'Aug 15-19, 2024',
-      days: 5,
-      status: 'approved',
-      reason: 'Family vacation to Bali',
-      submittedDate: DateTime(2024, 7, 10),
-      approvedBy: 'Sarah Johnson',
-    ),
-    LeaveRequest(
-      id: 2,
-      type: 'Sick Leave',
-      icon: '🏥',
-      dates: 'Jul 8, 2024',
-      days: 1,
-      status: 'approved',
-      reason: 'Medical appointment',
-      submittedDate: DateTime(2024, 7, 7),
-      approvedBy: 'Sarah Johnson',
-    ),
-    LeaveRequest(
-      id: 3,
-      type: 'Personal Leave',
-      icon: '👤',
-      dates: 'Aug 22, 2024',
-      days: 1,
-      status: 'pending',
-      reason: 'Moving to new apartment',
-      submittedDate: DateTime(2024, 7, 18),
-    ),
-    LeaveRequest(
-      id: 4,
-      type: 'Annual Leave',
-      icon: '🏖️',
-      dates: 'Jun 20-22, 2024',
-      days: 3,
-      status: 'rejected',
-      reason: 'Weekend getaway',
-      submittedDate: DateTime(2024, 6, 15),
-      rejectedBy: 'Sarah Johnson',
-      rejectionReason: 'Insufficient annual leave balance',
-    ),
-  ];
+  // final List<LeaveRequest> leaveRequests = [
+  //   LeaveRequest(
+  //     id: 1,
+  //     type: 'Annual Leave',
+  //     icon: '🏖️',
+  //     dates: 'Aug 15-19, 2024',
+  //     days: 5,
+  //     status: 'approved',
+  //     reason: 'Family vacation to Bali',
+  //     submittedDate: DateTime(2024, 7, 10),
+  //     approvedBy: 'Sarah Johnson',
+  //   ),
+  //   LeaveRequest(
+  //     id: 2,
+  //     type: 'Sick Leave',
+  //     icon: '🏥',
+  //     dates: 'Jul 8, 2024',
+  //     days: 1,
+  //     status: 'approved',
+  //     reason: 'Medical appointment',
+  //     submittedDate: DateTime(2024, 7, 7),
+  //     approvedBy: 'Sarah Johnson',
+  //   ),
+  //   LeaveRequest(
+  //     id: 3,
+  //     type: 'Personal Leave',
+  //     icon: '👤',
+  //     dates: 'Aug 22, 2024',
+  //     days: 1,
+  //     status: 'pending',
+  //     reason: 'Moving to new apartment',
+  //     submittedDate: DateTime(2024, 7, 18),
+  //   ),
+  //   LeaveRequest(
+  //     id: 4,
+  //     type: 'Annual Leave',
+  //     icon: '🏖️',
+  //     dates: 'Jun 20-22, 2024',
+  //     days: 3,
+  //     status: 'rejected',
+  //     reason: 'Weekend getaway',
+  //     submittedDate: DateTime(2024, 6, 15),
+  //     rejectedBy: 'Sarah Johnson',
+  //     rejectionReason: 'Insufficient annual leave balance',
+  //   ),
+  // ];
 
   Map<String, Color> getStatusColor(String status) {
     switch (status) {
@@ -139,25 +140,25 @@ class _Leave extends State<Leave> {
           'bg': const Color(0xFFD1FAE5),
           'text': const Color(0xFF065F46),
           'border': const Color(0xFF6EE7B7),
-        }; // emerald-100, emerald-700, emerald-200
+        };
       case 'pending':
         return {
           'bg': const Color(0xFFFFFBEB),
           'text': const Color(0xFFB45309),
           'border': const Color(0xFFFDE68A),
-        }; // amber-100, amber-700, amber-200
+        };
       case 'rejected':
         return {
           'bg': const Color(0xFFFFEEEE),
           'text': const Color(0xFF991B1B),
           'border': const Color(0xFFFECACA),
-        }; // red-100, red-700, red-200
+        };
       default:
         return {
           'bg': const Color(0xFFF3F4F6),
           'text': const Color(0xFF4B5563),
           'border': const Color(0xFFE5E7EB),
-        }; // gray-100, gray-700, gray-200
+        };
     }
   }
 
@@ -166,12 +167,19 @@ class _Leave extends State<Leave> {
       case 'approved':
         return Icons.check;
       case 'pending':
-        return Icons.error_outline; // Changed from AlertCircle
+        return Icons.error_outline;
       case 'rejected':
         return Icons.close;
       default:
         return Icons.error_outline;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fetchLeaveHistory();
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
@@ -232,20 +240,20 @@ class _Leave extends State<Leave> {
       if (userData == null || userData['id'] == null) {
         throw Exception('User data not found. Please log in again.');
       }
-      final employeeId = userData['id'];
+      final String employeeId = userData['id'];
 
       final result = await _leaveService.getLeaveRequestsByEmployee(employeeId);
 
       if (mounted) {
         if (result['success']) {
           setState(() {
-            _leaveRequests = result['leaveRequests'];
+            leaveRequests = result['leaveRequests'];
           });
         } else {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(result['message'])));
-          _leaveRequests = [];
+          leaveRequests = [];
         }
       }
     } catch (e) {
@@ -253,7 +261,7 @@ class _Leave extends State<Leave> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error fetching leave history: $e')),
         );
-        _leaveRequests = [];
+        leaveRequests = [];
       }
     } finally {
       if (mounted) {
@@ -268,7 +276,7 @@ class _Leave extends State<Leave> {
     if (formData.leaveType == null ||
         formData.startDate == null ||
         formData.endDate == null ||
-        formData.reason.isEmpty) {
+        _reasonController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all required fields.'),
@@ -294,7 +302,7 @@ class _Leave extends State<Leave> {
         leaveType: formData.leaveType!,
         startDate: formData.startDate!,
         endDate: formData.endDate!,
-        reason: formData.reason,
+        reason: _reasonController.text,
       );
 
       if (mounted) {
@@ -335,7 +343,6 @@ class _Leave extends State<Leave> {
     setState(() {
       isSubmitting = false;
       showSuccess = true;
-      // formData.reset();
     });
 
     Future.delayed(const Duration(seconds: 3), () {
@@ -356,10 +363,7 @@ class _Leave extends State<Leave> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8FAFC),
-              Color(0xFFEEF2FF),
-            ], // Equivalent to slate-50 to blue-50 in React code
+            colors: [Color(0xFFF8FAFC), Color(0xFFEEF2FF)],
           ),
         ),
         child: Column(
@@ -371,20 +375,17 @@ class _Leave extends State<Leave> {
                   right: 24.0,
                   top: 24.0,
                   bottom: 96.0,
-                ), // Added bottom padding for space above bottom nav
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Success Message
                     if (showSuccess)
                       Container(
                         margin: const EdgeInsets.only(bottom: 24.0),
                         padding: const EdgeInsets.all(16.0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4), // emerald-50
-                          border: Border.all(
-                            color: const Color(0xFFD1FAE5),
-                          ), // emerald-200
+                          color: const Color(0xFFF0FDF4),
+                          border: Border.all(color: const Color(0xFFD1FAE5)),
                           borderRadius: BorderRadius.circular(16.0),
                         ),
                         child: Row(
@@ -393,10 +394,8 @@ class _Leave extends State<Leave> {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981), // emerald-500
-                                borderRadius: BorderRadius.circular(
-                                  999,
-                                ), // rounded-full
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: const Icon(
                                 Icons.check,
@@ -413,14 +412,14 @@ class _Leave extends State<Leave> {
                                     'Request Submitted!',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF065F46), // emerald-700
+                                      color: Color(0xFF065F46),
                                     ),
                                   ),
                                   Text(
                                     'Your leave request has been sent for approval.',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Color(0xFF047857), // emerald-600
+                                      color: Color(0xFF047857),
                                     ),
                                   ),
                                 ],
@@ -430,7 +429,6 @@ class _Leave extends State<Leave> {
                         ),
                       ),
 
-                    // New Request Form
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -442,9 +440,7 @@ class _Leave extends State<Leave> {
                             offset: const Offset(0, 2),
                           ),
                         ],
-                        border: Border.all(
-                          color: const Color(0xFFF1F5F9),
-                        ), // slate-100
+                        border: Border.all(color: const Color(0xFFF1F5F9)),
                       ),
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
@@ -460,7 +456,7 @@ class _Leave extends State<Leave> {
                                     colors: [
                                       Color(0xFF3B82F6),
                                       Color(0xFF4F46E5),
-                                    ], // blue-500 to indigo-600
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -481,14 +477,14 @@ class _Leave extends State<Leave> {
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E293B), // slate-800
+                                      color: Color(0xFF1E293B),
                                     ),
                                   ),
                                   Text(
                                     'Fill out the details below',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Color(0xFF64748B), // slate-500
+                                      color: Color(0xFF64748B),
                                     ),
                                   ),
                                 ],
@@ -497,7 +493,6 @@ class _Leave extends State<Leave> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Leave Type Dropdown
                           Text(
                             'Leave Type',
                             style: TextStyle(
@@ -520,25 +515,25 @@ class _Leave extends State<Leave> {
                                 borderRadius: BorderRadius.circular(12.0),
                                 borderSide: const BorderSide(
                                   color: Color(0xFFE2E8F0),
-                                ), // slate-200
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                                 borderSide: const BorderSide(
                                   color: Color(0xFFE2E8F0),
-                                ), // slate-200
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                                 borderSide: const BorderSide(
                                   color: Color(0xFF3B82F6),
                                   width: 2.0,
-                                ), // blue-500 with ring effect
+                                ),
                               ),
                               suffixIcon: const Icon(
                                 Icons.keyboard_arrow_down,
                                 color: Color(0xFF94A3B8),
-                              ), // slate-400
+                              ),
                             ),
                             hint: const Text('Select leave type'),
                             items: leaveTypes.map((type) {
@@ -555,7 +550,6 @@ class _Leave extends State<Leave> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Date Range
                           Row(
                             children: [
                               Expanded(
@@ -689,15 +683,14 @@ class _Leave extends State<Leave> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Duration Display
                           if (calculateDays() > 0)
                             Container(
                               padding: const EdgeInsets.all(16.0),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF), // blue-50
+                                color: const Color(0xFFEFF6FF),
                                 border: Border.all(
                                   color: const Color(0xFFBFDBFE),
-                                ), // blue-200
+                                ),
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
                               child: Text.rich(
@@ -718,9 +711,7 @@ class _Leave extends State<Leave> {
                                       style: TextStyle(
                                         color: calculateDays() <= 18
                                             ? const Color(0xFF047857)
-                                            : const Color(
-                                                0xFFDC2626,
-                                              ), // emerald-600 vs red-600
+                                            : const Color(0xFFDC2626),
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -729,12 +720,11 @@ class _Leave extends State<Leave> {
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF1D4ED8),
-                                ), // blue-700
+                                ),
                               ),
                             ),
                           const SizedBox(height: 20),
 
-                          // Reason Text Area
                           Text(
                             'Reason',
                             style: TextStyle(
@@ -746,14 +736,7 @@ class _Leave extends State<Leave> {
                           const SizedBox(height: 8),
                           TextField(
                             maxLines: 4,
-                            onChanged: (value) {
-                              setState(() {
-                                formData.reason = value;
-                              });
-                            },
-                            controller: TextEditingController(
-                              text: formData.reason,
-                            ),
+                            controller: _reasonController,
                             decoration: InputDecoration(
                               hintText:
                                   'Please provide a brief reason for your leave request...',
@@ -784,12 +767,11 @@ class _Leave extends State<Leave> {
                                   color: Color(0xFF94A3B8),
                                   size: 20,
                                 ),
-                              ), // file-text equivalent
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
 
-                          // File Attachment
                           Text(
                             'Supporting Document (Optional)',
                             style: TextStyle(
@@ -809,7 +791,7 @@ class _Leave extends State<Leave> {
                                   color: const Color(0xFFCBD5E1),
                                   width: 2.0,
                                   style: BorderStyle.solid,
-                                ), // slate-300
+                                ),
                                 borderRadius: BorderRadius.circular(12.0),
                                 color: Colors.white,
                               ),
@@ -820,7 +802,7 @@ class _Leave extends State<Leave> {
                                     Icons.upload_file,
                                     color: Color(0xFF94A3B8),
                                     size: 20,
-                                  ), // upload icon
+                                  ),
                                   const SizedBox(width: 12),
                                   Flexible(
                                     child: Text(
@@ -831,7 +813,7 @@ class _Leave extends State<Leave> {
                                           : 'Upload file (PDF, DOC, Image)',
                                       style: const TextStyle(
                                         color: Color(0xFF475569),
-                                      ), // slate-600
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -841,7 +823,6 @@ class _Leave extends State<Leave> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Submit Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -851,9 +832,7 @@ class _Leave extends State<Leave> {
                               style:
                                   ElevatedButton.styleFrom(
                                     foregroundColor: Colors.white,
-                                    backgroundColor: const Color(
-                                      0xFF3B82F6,
-                                    ), // blue-500
+                                    backgroundColor: const Color(0xFF3B82F6),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12.0),
                                     ),
@@ -867,8 +846,6 @@ class _Leave extends State<Leave> {
                                     disabledForegroundColor: Colors.white
                                         .withOpacity(0.7),
                                   ).copyWith(
-                                    // Gradient hover effect needs to be manually managed or using a custom button.
-                                    // For simplicity, sticking to solid color for now.
                                     overlayColor:
                                         MaterialStateProperty.resolveWith<
                                           Color?
@@ -878,9 +855,9 @@ class _Leave extends State<Leave> {
                                           )) {
                                             return const Color(
                                               0xFF4F46E5,
-                                            ).withOpacity(0.2); // indigo-600
+                                            ).withOpacity(0.2);
                                           }
-                                          return null; // Defer to the widget's default.
+                                          return null;
                                         }),
                                   ),
                               child: isSubmitting
@@ -905,10 +882,7 @@ class _Leave extends State<Leave> {
                                   : Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: const [
-                                        Icon(
-                                          Icons.send_outlined,
-                                          size: 20,
-                                        ), // send icon
+                                        Icon(Icons.send_outlined, size: 20),
                                         SizedBox(width: 8),
                                         Text('Submit Request'),
                                       ],
@@ -920,7 +894,6 @@ class _Leave extends State<Leave> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Request History
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -932,9 +905,7 @@ class _Leave extends State<Leave> {
                             offset: const Offset(0, 2),
                           ),
                         ],
-                        border: Border.all(
-                          color: const Color(0xFFF1F5F9),
-                        ), // slate-100
+                        border: Border.all(color: const Color(0xFFF1F5F9)),
                       ),
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
@@ -974,10 +945,8 @@ class _Leave extends State<Leave> {
                           ),
                           const SizedBox(height: 24),
                           ListView.separated(
-                            shrinkWrap:
-                                true, // Important to allow ListView inside SingleChildScrollView
-                            physics:
-                                const NeverScrollableScrollPhysics(), // Disable ListView's own scrolling
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: leaveRequests.length,
                             separatorBuilder: (context, index) =>
                                 const SizedBox(height: 16),
@@ -988,7 +957,7 @@ class _Leave extends State<Leave> {
                                 decoration: BoxDecoration(
                                   border: Border.all(
                                     color: const Color(0xFFE2E8F0),
-                                  ), // slate-200
+                                  ),
                                   borderRadius: BorderRadius.circular(12.0),
                                   color: Colors.white,
                                   boxShadow: [
@@ -1052,7 +1021,7 @@ class _Leave extends State<Leave> {
                                             ),
                                             borderRadius: BorderRadius.circular(
                                               999,
-                                            ), // rounded-full
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -1064,8 +1033,7 @@ class _Leave extends State<Leave> {
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
-                                                request.status
-                                                    .capitalize(), // Using the extension
+                                                request.status.capitalize(),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w500,
@@ -1081,7 +1049,7 @@ class _Leave extends State<Leave> {
                                     Padding(
                                       padding: const EdgeInsets.only(
                                         left: 44.0,
-                                      ), // Align with text above
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -1124,9 +1092,7 @@ class _Leave extends State<Leave> {
                                                 '✓ Approved by ${request.approvedBy}',
                                                 style: const TextStyle(
                                                   fontSize: 12,
-                                                  color: Color(
-                                                    0xFF047857,
-                                                  ), // emerald-600
+                                                  color: Color(0xFF047857),
                                                 ),
                                               ),
                                             ),
@@ -1140,9 +1106,7 @@ class _Leave extends State<Leave> {
                                                 8.0,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: const Color(
-                                                  0xFFFEF2F2,
-                                                ), // red-50
+                                                color: const Color(0xFFFEF2F2),
                                                 borderRadius:
                                                     BorderRadius.circular(8.0),
                                               ),
@@ -1164,9 +1128,7 @@ class _Leave extends State<Leave> {
                                                 ),
                                                 style: const TextStyle(
                                                   fontSize: 12,
-                                                  color: Color(
-                                                    0xFF991B1B,
-                                                  ), // red-700
+                                                  color: Color(0xFF991B1B),
                                                 ),
                                               ),
                                             ),
@@ -1192,7 +1154,6 @@ class _Leave extends State<Leave> {
   }
 }
 
-// Extension to capitalize the first letter of a string
 extension StringExtension on String {
   String capitalize() {
     if (isEmpty) {
