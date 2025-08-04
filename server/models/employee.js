@@ -14,6 +14,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "employee_id",
         as: "payrolls",
       });
+
+      // Asosiasi baru: Employee belongs to Company
+      Employee.belongsTo(models.Company, {
+        foreignKey: "company_id",
+        as: "company",
+      });
     }
 
     static async hashPassword(password) {
@@ -78,6 +84,17 @@ module.exports = (sequelize, DataTypes) => {
       status: {
         type: DataTypes.ENUM("active", "inactive"),
         defaultValue: "active",
+      },
+      // Kolom baru untuk foreign key ke tabel companies
+      company_id: {
+        type: DataTypes.UUID,
+        allowNull: true, // Atau false jika setiap employee wajib punya company_id
+        references: {
+          model: "companies",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "SET NULL", // Ganti dengan 'CASCADE' jika employee harus terhapus
       },
     },
     {
