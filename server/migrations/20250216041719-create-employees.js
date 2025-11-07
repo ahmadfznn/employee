@@ -54,12 +54,11 @@ module.exports = {
         type: Sequelize.ENUM("active", "inactive"),
         defaultValue: "active",
       },
-      // Kolom company_id langsung ditambahkan di sini
       company_id: {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: "companies", // Merujuk ke tabel companies
+          model: "companies",
           key: "id",
         },
         onUpdate: "CASCADE",

@@ -75,38 +75,11 @@ export default function Profile() {
         editableData
       );
 
-      let dataToUpdate: Partial<Employee> = {};
-      if (editingSection === "meta") {
-        dataToUpdate = {
-          name: editableData.name,
-          photo_url: editableData.photo_url,
-        };
-      } else if (editingSection === "personal") {
-        dataToUpdate = {
-          name: editableData.name,
-          email: editableData.email,
-          phone: editableData.phone,
-          position: editableData.position,
-        };
-      } else if (editingSection === "address") {
-        dataToUpdate = {
-          address: editableData.address,
-        };
-      }
-
-      const filteredDataToUpdate = Object.fromEntries(
-        Object.entries(dataToUpdate).filter(([_, value]) => value !== undefined)
-      );
-
-      const res = await ProfileService.updateProfile(
-        user.id,
-        filteredDataToUpdate
-      );
+      const res = await ProfileService.updateProfile(user.id, editableData);
 
       if (res.status === 200) {
         console.log("Changes saved successfully!");
-
-        setUser({ ...user, ...filteredDataToUpdate });
+        setUser({ ...user, ...editableData });
         closeModal();
         setEditingSection(null);
         alert("Profile updated successfully!");

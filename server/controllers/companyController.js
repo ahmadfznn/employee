@@ -1,19 +1,34 @@
 // companyController.js
 
-const company = require("../models/company");
+// Import kedua model yang diperlukan
+const { Company, CompanySettings } = require("../models");
+const companySettings = require("../models/companySetting");
 
 /**
- * @description Mendapatkan data perusahaan tunggal.
+ * @description Mendapatkan data perusahaan dan pengaturannya.
  * @route GET /api/company
  * @access Private
  */
-exports.getCompany = async (req, res) => {
+exports.getCompanyAndSettings = async (req, res) => {
   try {
-    const company = await company.findOne(); // Mengambil satu data perusahaan saja
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+    // Ambil data perusahaan dan pengaturannya secara bersamaan
+    const companyData = await Company.findOne();
+    const settingsData = await CompanySettings.findOne();
+
+    // Periksa apakah data pe rusahaan dan pengaturan ditemukan
+    if (!companyData || !settingsData) {
+      return res
+        .status(404)
+        .json({ message: "Company data or settings not found" });
     }
-    res.status(200).json({ data: company });
+
+    // Gabungkan kedua data menjadi satu objek untuk dikirim ke client
+    const combinedData = {
+      company: companyData,
+      settings: settingsData,
+    };
+
+    res.status(200).json({ data: combinedData });
   } catch (error) {
     // Menangani error server
     res.status(500).json({ message: error.message });
@@ -21,81 +36,167 @@ exports.getCompany = async (req, res) => {
 };
 
 /**
- * @description Membuat data perusahaan tunggal.
+ * @description Membuat data perusahaan dan pengaturannya.
  * @route POST /api/company
  * @access Private
  */
-exports.createCompany = async (req, res) => {
+exports.createCompanyAndSettings = async (req, res) => {
   try {
-    const existingCompany = await company.findOne(); // Memeriksa apakah perusahaan sudah ada
-    if (existingCompany) {
+    // Periksa apakah data perusahaan dan pengaturannya sudah ada
+    const existingCompany = await Company.findOne();
+    const existingSettings = await CompanySettings.findOne();
+
+    if (existingCompany || existingSettings) {
       return res.status(400).json({
-        message: "Company already exists. You can only have one company.",
+        message:
+          "Company and settings already exist. You can only update them.",
       });
     }
 
-    const { name, address, phone, email, website } = req.body;
+    // Field-field yang akan diambil dari body request
+    const companyFields = ["name", "address", "phone", "email", "website"];
+    const settingsFields = [
+      "standard_work_hours_per_day",
+      "standard_work_days_per_week",
+      "start_work_time",
+      "end_work_time",
+      "overtime_rate_multiplier",
+    ];
 
-    // Pastikan semua data yang dibutuhkan ada
-    if (!name || !address) {
-      return res.status(400).json({ message: "Name and address are required" });
+    const newCompanyData = {};
+    const newSettingsData = {};
+
+    companyFields.forEach((field) => {
+      newCompanyData[field] = req.body[field];
+    });
+
+    settingsFields.forEach((field) => {
+      newSettingsData[field] = req.body[field];
+    });
+
+    // Pastikan field wajib ada
+    if (
+      !newCompanyData.name ||
+      !newCompanyData.address ||
+      !newCompanyData.email
+    ) {
+      return res.status(400).json({
+        message: "Name, address, and email are required for company.",
+      });
     }
 
-    await company.create({ name, address, phone, email, website });
-    res.status(201).json({ message: "Company added successfully." });
+    // Pastikan field wajib ada untuk settings
+    if (
+      !newSettingsData.standard_work_hours_per_day ||
+      !newSettingsData.standard_work_days_per_week ||
+      !newSettingsData.start_work_time ||
+      !newSettingsData.end_work_time ||
+      !newSettingsData.overtime_rate_multiplier
+    ) {
+      return res
+        .status(400)
+        .json({ message: "All company settings fields are required." });
+    }
+
+    // Buat kedua data secara bersamaan
+    await Company.create(newCompanyData);
+    await CompanySettings.create(newSettingsData);
+
+    res
+      .status(201)
+      .json({ message: "Company and settings created successfully." });
   } catch (error) {
-    // Menangani error server
     res.status(500).json({ message: error.message });
   }
 };
 
 /**
- * @description Memperbarui data perusahaan tunggal.
+ * @description Memperbarui data perusahaan dan pengaturannya.
  * @route PUT /api/company
  * @access Private
  */
-exports.updateCompany = async (req, res) => {
+exports.updateCompanyAndSettings = async (req, res) => {
   try {
-    const company = await company.findOne(); // Mengambil satu data perusahaan saja
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+    const companyData = await Company.findOne();
+    const settingsData = await CompanySettings.findOne();
+
+    if (!companyData || !settingsData) {
+      return res
+        .status(404)
+        .json({ message: "Company data or settings not found" });
     }
 
-    const updates = {};
-    const allowedFields = ["name", "address", "phone", "email", "website"];
+    const updatesCompany = {};
+    const updatesSettings = {};
 
-    allowedFields.forEach((field) => {
+    const allowedCompanyFields = [
+      "name",
+      "address",
+      "phone",
+      "email",
+      "website",
+    ];
+    const allowedSettingsFields = [
+      "standard_work_hours_per_day",
+      "standard_work_days_per_week",
+      "start_work_time",
+      "end_work_time",
+      "overtime_rate_multiplier",
+    ];
+
+    // Pisahkan field dari req.body ke update object yang sesuai
+    allowedCompanyFields.forEach((field) => {
       if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
+        updatesCompany[field] = req.body[field];
       }
     });
 
-    await company.update(updates);
+    allowedSettingsFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updatesSettings[field] = req.body[field];
+      }
+    });
 
-    res.status(200).json({ message: "Company updated successfully." });
+    // Lakukan update hanya jika ada field yang dikirim
+    if (Object.keys(updatesCompany).length > 0) {
+      await companyData.update(updatesCompany);
+    }
+    if (Object.keys(updatesSettings).length > 0) {
+      await settingsData.update(updatesSettings);
+    }
+
+    res
+      .status(200)
+      .json({ message: "Company and settings updated successfully." });
   } catch (error) {
-    // Menangani error server
     res.status(500).json({ message: error.message });
   }
 };
 
 /**
- * @description Menghapus data perusahaan tunggal.
+ * @description Menghapus data perusahaan dan pengaturannya.
  * @route DELETE /api/company
  * @access Private
  */
-exports.deleteCompany = async (req, res) => {
+exports.deleteCompanyAndSettings = async (req, res) => {
   try {
-    const company = await company.findOne(); // Mengambil satu data perusahaan saja
+    const companyData = await Company.findOne();
+    const settingsData = await CompanySettings.findOne();
 
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+    if (!companyData || !settingsData) {
+      return res
+        .status(404)
+        .json({ message: "Company data or settings not found" });
     }
 
-    await company.destroy();
-    res.status(200).json({ message: "Company deleted successfully" });
+    // Hapus kedua data secara bersamaan
+    await companyData.destroy();
+    await settingsData.destroy();
+
+    res
+      .status(200)
+      .json({ message: "Company and settings deleted successfully." });
   } catch (error) {
-    // Menangani error server
     res.status(500).json({ message: error.message });
   }
 };

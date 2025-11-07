@@ -4,7 +4,18 @@ const path = require("path");
 
 exports.getAllEmployees = async (req, res) => {
   try {
-    const employees = await Employee.findAll();
+    const { sortBy, order } = req.query;
+
+    const allowedSortBy = ["name", "position", "created_at", "updated_at"];
+    const sortField = allowedSortBy.includes(sortBy) ? sortBy : "updated_at";
+    const sortOrder = order === "asc" ? "ASC" : "DESC";
+
+    const sortOptions = [[sortField, sortOrder]];
+
+    const employees = await Employee.findAll({
+      order: sortOptions,
+    });
+
     console.log(`Employee : ${employees}`);
     res.status(200).json({ data: employees });
   } catch (error) {
@@ -59,6 +70,7 @@ exports.createEmployee = async (req, res) => {
 
 exports.updateEmployee = async (req, res) => {
   try {
+    console.log(req.params.id);
     const employee = await Employee.findByPk(req.params.id);
     if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
@@ -69,28 +81,41 @@ exports.updateEmployee = async (req, res) => {
       "name",
       "email",
       "phone",
-      "password",
+      "password", // Tambahkan password di sini untuk di-handle
       "position",
       "role",
-      "salary",
-      "addres",
-      "status",
+      "photo_url",
+      "address",
+      "salary", // Tambahkan salary di sini jika memungkinkan untuk di-update
+      "status", // Tambahkan status di sini
     ];
 
     allowedFields.forEach((field) => {
+      // Hanya masukkan field yang ada di body request
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
       }
     });
 
-    if (req.file) {
-      updates.photo_url = req.file.filename;
+    // Jika ada password baru, hash terlebih dahulu sebelum di-update
+    if (updates.password) {
+      const bcrypt = require("bcrypt");
+      updates.password = await bcrypt.hash(updates.password, 10);
     }
 
-    await employee.update(updates);
+    // Perbaikan ada di baris ini
+    // Opsi `fields: Object.keys(updates)` akan membatasi validasi hanya pada field yang di-update
+    await employee.update(updates, { fields: Object.keys(updates) });
 
     res.status(200).json({ message: "Employee updated successfully." });
   } catch (error) {
+    // Tangani error validasi Sequelize secara spesifik untuk debug yang lebih mudah
+    if (error.name === "SequelizeValidationError") {
+      const messages = error.errors.map((err) => err.message);
+      return res
+        .status(400)
+        .json({ message: "Validation error", errors: messages });
+    }
     res.status(500).json({ message: error.message });
   }
 };

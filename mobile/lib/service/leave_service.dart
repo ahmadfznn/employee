@@ -4,7 +4,7 @@ import 'package:mobile/service/auth_service.dart';
 import 'package:mobile/models/leave_request_model.dart';
 
 class LeaveService {
-  final String _baseUrl = 'http://192.168.1.6:4000/api';
+  final String _baseUrl = 'http://192.168.1.9:4000/api';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getAuthHeaders() async {

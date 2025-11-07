@@ -15,7 +15,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "payrolls",
       });
 
-      // Asosiasi baru: Employee belongs to Company
       Employee.belongsTo(models.Company, {
         foreignKey: "company_id",
         as: "company",
@@ -85,16 +84,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("active", "inactive"),
         defaultValue: "active",
       },
-      // Kolom baru untuk foreign key ke tabel companies
       company_id: {
         type: DataTypes.UUID,
-        allowNull: true, // Atau false jika setiap employee wajib punya company_id
+        allowNull: true,
         references: {
           model: "companies",
           key: "id",
         },
         onUpdate: "CASCADE",
-        onDelete: "SET NULL", // Ganti dengan 'CASCADE' jika employee harus terhapus
+        onDelete: "SET NULL",
       },
     },
     {

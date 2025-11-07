@@ -102,7 +102,7 @@ export default function AddEmployeeForm() {
   };
 
   return (
-    <ComponentCard title="Employee Form" previousAction="/employee">
+    <ComponentCard prefix="Employee Form" previousAction="/employee">
       <div className="space-y-6">
         <div>
           <Label>Profile Picture</Label>

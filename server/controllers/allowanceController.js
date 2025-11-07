@@ -1,6 +1,6 @@
 // allowancesController.js
 
-const allowance = require("../models");
+const { Allowance } = require("../models");
 
 /**
  * @description Mendapatkan semua data tunjangan.
@@ -9,7 +9,7 @@ const allowance = require("../models");
  */
 exports.getAllAllowances = async (req, res) => {
   try {
-    const allowances = await allowance.findAll();
+    const allowances = await Allowance.findAll();
     res.status(200).json({ data: allowances });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -23,7 +23,7 @@ exports.getAllAllowances = async (req, res) => {
  */
 exports.getAllowanceById = async (req, res) => {
   try {
-    const allowance = await allowance.findByPk(req.params.id);
+    const allowance = await Allowance.findByPk(req.params.id);
     if (!allowance) {
       return res.status(404).json({ message: "allowance not found" });
     }
@@ -41,7 +41,7 @@ exports.getAllowanceById = async (req, res) => {
 exports.createAllowance = async (req, res) => {
   try {
     const { name, description, default_amount, is_fixed } = req.body;
-    await allowance.create({ name, description, default_amount, is_fixed });
+    await Allowance.create({ name, description, default_amount, is_fixed });
     res.status(201).json({ message: "allowance created successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -55,13 +55,13 @@ exports.createAllowance = async (req, res) => {
  */
 exports.updateAllowance = async (req, res) => {
   try {
-    const allowance = await allowance.findByPk(req.params.id);
+    const allowance = await Allowance.findByPk(req.params.id);
     if (!allowance) {
       return res.status(404).json({ message: "allowance not found" });
     }
 
     const { name, description, default_amount, is_fixed } = req.body;
-    await allowance.update({ name, description, default_amount, is_fixed });
+    await Allowance.update({ name, description, default_amount, is_fixed });
 
     res.status(200).json({ message: "allowance updated successfully." });
   } catch (error) {
@@ -76,11 +76,11 @@ exports.updateAllowance = async (req, res) => {
  */
 exports.deleteAllowance = async (req, res) => {
   try {
-    const allowance = await allowance.findByPk(req.params.id);
+    const allowance = await Allowance.findByPk(req.params.id);
     if (!allowance) {
       return res.status(404).json({ message: "allowance not found" });
     }
-    await allowance.destroy();
+    await Allowance.destroy();
     res.status(200).json({ message: "allowance deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,6 +1,6 @@
 // departmentsController.js
 
-const department = require("../models");
+const { Department } = require("../models");
 
 /**
  * @description Mendapatkan semua data departemen.
@@ -9,7 +9,7 @@ const department = require("../models");
  */
 exports.getAllDepartments = async (req, res) => {
   try {
-    const departments = await department.findAll();
+    const departments = await Department.findAll();
     res.status(200).json({ data: departments });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -23,7 +23,7 @@ exports.getAllDepartments = async (req, res) => {
  */
 exports.getDepartmentById = async (req, res) => {
   try {
-    const department = await department.findByPk(req.params.id);
+    const department = await Department.findByPk(req.params.id);
     if (!department) {
       return res.status(404).json({ message: "department not found" });
     }
@@ -41,7 +41,7 @@ exports.getDepartmentById = async (req, res) => {
 exports.createDepartment = async (req, res) => {
   try {
     const { name, description } = req.body;
-    await department.create({ name, description });
+    await Department.create({ name, description });
     res.status(201).json({ message: "department created successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -55,13 +55,13 @@ exports.createDepartment = async (req, res) => {
  */
 exports.updateDepartment = async (req, res) => {
   try {
-    const department = await department.findByPk(req.params.id);
+    const department = await Department.findByPk(req.params.id);
     if (!department) {
       return res.status(404).json({ message: "department not found" });
     }
 
     const { name, description } = req.body;
-    await department.update({ name, description });
+    await Department.update({ name, description });
 
     res.status(200).json({ message: "department updated successfully." });
   } catch (error) {
@@ -76,11 +76,11 @@ exports.updateDepartment = async (req, res) => {
  */
 exports.deleteDepartment = async (req, res) => {
   try {
-    const department = await department.findByPk(req.params.id);
+    const department = await Department.findByPk(req.params.id);
     if (!department) {
       return res.status(404).json({ message: "department not found" });
     }
-    await department.destroy();
+    await Department.destroy();
     res.status(200).json({ message: "department deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

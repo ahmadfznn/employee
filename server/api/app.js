@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const http = require("http");
 const router = require("../routes/router");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 
 const app = express();
 app.use(helmet());

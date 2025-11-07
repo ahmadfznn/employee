@@ -1,6 +1,6 @@
 // employeeAllowancesController.js
 
-const employeeAllowance = require("../models");
+const { EmployeeAllowance } = require("../models");
 
 /**
  * @description Mendapatkan semua tunjangan karyawan.
@@ -9,7 +9,7 @@ const employeeAllowance = require("../models");
  */
 exports.getAllEmployeeAllowances = async (req, res) => {
   try {
-    const employeeAllowances = await employeeAllowance.findAll();
+    const employeeAllowances = await EmployeeAllowance.findAll();
     res.status(200).json({ data: employeeAllowances });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -23,7 +23,7 @@ exports.getAllEmployeeAllowances = async (req, res) => {
  */
 exports.getEmployeeAllowanceById = async (req, res) => {
   try {
-    const employeeAllowance = await employeeAllowance.findByPk(req.params.id);
+    const employeeAllowance = await EmployeeAllowance.findByPk(req.params.id);
     if (!employeeAllowance) {
       return res.status(404).json({ message: "Employee allowance not found" });
     }
@@ -41,7 +41,7 @@ exports.getEmployeeAllowanceById = async (req, res) => {
 exports.getAllowancesByEmployee = async (req, res) => {
   try {
     const employeeId = req.params.employeeId;
-    const employeeAllowances = await employeeAllowance.findAll({
+    const employeeAllowances = await EmployeeAllowance.findAll({
       where: { employee_id: employeeId },
     });
     res.status(200).json({ data: employeeAllowances });
@@ -58,7 +58,7 @@ exports.getAllowancesByEmployee = async (req, res) => {
 exports.createEmployeeAllowance = async (req, res) => {
   try {
     const { employee_id, allowance_id, amount, effective_date } = req.body;
-    await employeeAllowance.create({
+    await EmployeeAllowance.create({
       employee_id,
       allowance_id,
       amount,
@@ -79,13 +79,13 @@ exports.createEmployeeAllowance = async (req, res) => {
  */
 exports.updateEmployeeAllowance = async (req, res) => {
   try {
-    const employeeAllowance = await employeeAllowance.findByPk(req.params.id);
+    const employeeAllowance = await EmployeeAllowance.findByPk(req.params.id);
     if (!employeeAllowance) {
       return res.status(404).json({ message: "Employee allowance not found" });
     }
 
     const { employee_id, allowance_id, amount, effective_date } = req.body;
-    await employeeAllowance.update({
+    await EmployeeAllowance.update({
       employee_id,
       allowance_id,
       amount,
@@ -107,11 +107,11 @@ exports.updateEmployeeAllowance = async (req, res) => {
  */
 exports.deleteEmployeeAllowance = async (req, res) => {
   try {
-    const employeeAllowance = await employeeAllowance.findByPk(req.params.id);
+    const employeeAllowance = await EmployeeAllowance.findByPk(req.params.id);
     if (!employeeAllowance) {
       return res.status(404).json({ message: "Employee allowance not found" });
     }
-    await employeeAllowance.destroy();
+    await EmployeeAllowance.destroy();
     res
       .status(200)
       .json({ message: "Employee allowance deleted successfully" });

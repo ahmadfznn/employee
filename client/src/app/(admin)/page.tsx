@@ -1,9 +1,18 @@
-"use client"
+"use client";
 
 import React, { useEffect, useState } from "react";
 import EmployeeChart from "@/components/ecommerce/EmployeeChart";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import { FaUserTie, FaCalendarCheck, FaMoneyBillWave, FaHourglassHalf, FaBell, FaUsers, FaSignOutAlt, FaCog } from "react-icons/fa";
+import {
+  FaUserTie,
+  FaCalendarCheck,
+  FaMoneyBillWave,
+  FaHourglassHalf,
+  FaBell,
+  FaUsers,
+  FaSignOutAlt,
+  FaCog,
+} from "react-icons/fa";
 
 // Types
 interface Notification {
@@ -70,7 +79,7 @@ export default function Dashboard() {
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-gray-600">Loading dashboard...</div>
       </div>
     );
@@ -91,29 +100,45 @@ export default function Dashboard() {
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-5 flex items-center gap-4">
           <FaUsers className="text-blue-500 text-3xl" />
           <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalEmployees}</div>
-            <div className="text-gray-500 dark:text-gray-300 text-sm">Total Employees</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalEmployees}
+            </div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">
+              Total Employees
+            </div>
           </div>
         </section>
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-5 flex items-center gap-4">
           <FaCalendarCheck className="text-green-500 text-3xl" />
           <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalAttendances}</div>
-            <div className="text-gray-500 dark:text-gray-300 text-sm">Today's Attendances</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalAttendances}
+            </div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">
+              Today's Attendances
+            </div>
           </div>
         </section>
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-5 flex items-center gap-4">
           <FaHourglassHalf className="text-yellow-500 text-3xl" />
           <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{pendingLeaveRequests}</div>
-            <div className="text-gray-500 dark:text-gray-300 text-sm">Pending Leave Requests</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {pendingLeaveRequests}
+            </div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">
+              Pending Leave Requests
+            </div>
           </div>
         </section>
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-5 flex items-center gap-4">
           <FaMoneyBillWave className="text-purple-500 text-3xl" />
           <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">${payrollSummary.toLocaleString()}</div>
-            <div className="text-gray-500 dark:text-gray-300 text-sm">Payroll (This Month)</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              ${payrollSummary.toLocaleString()}
+            </div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">
+              Payroll (This Month)
+            </div>
           </div>
         </section>
       </div>
@@ -125,7 +150,10 @@ export default function Dashboard() {
         </div>
         <ul className="space-y-2">
           {recentNotifications.map((n) => (
-            <li key={n.id} className="text-gray-600 dark:text-gray-200 text-sm flex items-center gap-2">
+            <li
+              key={n.id}
+              className="text-gray-600 dark:text-gray-200 text-sm flex items-center gap-2"
+            >
               <span className="inline-block w-2 h-2 bg-blue-400 rounded-full"></span>
               {n.message}
             </li>

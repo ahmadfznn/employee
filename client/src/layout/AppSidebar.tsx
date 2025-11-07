@@ -21,6 +21,7 @@ import {
   UserIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import { FaCog, FaIndustry } from "react-icons/fa";
 
 type NavItem = {
   name: string;
@@ -54,6 +55,11 @@ const navItems: NavItem[] = [
     icon: <DollarLineIcon />,
     name: "Payroll",
     path: "/payroll",
+  },
+  {
+    icon: <FaCog />,
+    name: "Company Setting",
+    path: "/company-setting",
   },
   // {
   //   icon: <CalenderIcon />,

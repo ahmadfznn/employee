@@ -4,7 +4,7 @@ import 'package:mobile/models/payroll_model.dart';
 import 'package:mobile/service/auth_service.dart';
 
 class PayrollService {
-  final String _baseUrl = 'http://192.168.1.6:4000/api';
+  final String _baseUrl = 'http://192.168.1.9:4000/api';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getAuthHeaders() async {

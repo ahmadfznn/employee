@@ -2,6 +2,52 @@ const { Payroll, Employee } = require("../models");
 
 const notificationController = require("./notificationController");
 
+exports.generateAllPayrolls = async (req, res) => {
+  try {
+    const { month } = req.body;
+
+    if (!month) {
+      return res.status(400).json({ message: "Month is required" });
+    }
+
+    const employees = await Employee.findAll();
+
+    if (employees.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No employees found to generate payroll" });
+    }
+
+    const newPayrolls = [];
+    for (const employee of employees) {
+      const base_salary = 5000000;
+      const bonus = 500000;
+      const deductions = 250000;
+      const total_salary = base_salary + bonus - deductions;
+
+      const payroll = await Payroll.create({
+        employee_id: employee.id,
+        month,
+        base_salary,
+        bonus,
+        deductions,
+        total_salary,
+        status: "pending",
+        payment_date: null,
+      });
+      newPayrolls.push(payroll);
+    }
+
+    return res.status(200).json({
+      message: `${newPayrolls.length} payroll records generated successfully`,
+      payrolls: newPayrolls,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 exports.approvePayroll = async (req, res) => {
   try {
     const { id } = req.params;
@@ -124,7 +170,7 @@ exports.getPayrollByEmployee = async (req, res) => {
       include: [
         {
           model: Employee,
-          as: 'employee',
+          as: "employee",
           attributes: ["name", "email", "position"],
         },
       ],
@@ -195,7 +241,7 @@ exports.getAllPayroll = async (req, res) => {
         {
           model: Employee,
           as: "employee",
-          attributes: ["name", "email", "position"],
+          attributes: ["id", "name", "email", "position"],
         },
       ],
     });

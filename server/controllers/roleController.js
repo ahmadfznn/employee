@@ -1,15 +1,13 @@
-// rolesController.js
-
-const role = require("../models");
+const { Role } = require("../models");
 
 /**
- * @description Mendapatkan semua data role.
+ * @description Mendapatkan semua data Role.
  * @route GET /api/roles
  * @access Private
  */
 exports.getAllRoles = async (req, res) => {
   try {
-    const roles = await role.findAll();
+    const roles = await Role.findAll();
     res.status(200).json({ data: roles });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -23,7 +21,7 @@ exports.getAllRoles = async (req, res) => {
  */
 exports.getRoleById = async (req, res) => {
   try {
-    const role = await role.findByPk(req.params.id);
+    const role = await Role.findByPk(req.params.id);
     if (!role) {
       return res.status(404).json({ message: "role not found" });
     }
@@ -41,7 +39,7 @@ exports.getRoleById = async (req, res) => {
 exports.createRole = async (req, res) => {
   try {
     const { name, base_salary, description } = req.body;
-    await role.create({ name, base_salary, description });
+    await Role.create({ name, base_salary, description });
     res.status(201).json({ message: "role created successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -55,13 +53,13 @@ exports.createRole = async (req, res) => {
  */
 exports.updateRole = async (req, res) => {
   try {
-    const role = await role.findByPk(req.params.id);
+    const role = await Role.findByPk(req.params.id);
     if (!role) {
       return res.status(404).json({ message: "role not found" });
     }
 
     const { name, base_salary, description } = req.body;
-    await role.update({ name, base_salary, description });
+    await Role.update({ name, base_salary, description });
 
     res.status(200).json({ message: "role updated successfully." });
   } catch (error) {
@@ -76,11 +74,11 @@ exports.updateRole = async (req, res) => {
  */
 exports.deleteRole = async (req, res) => {
   try {
-    const role = await role.findByPk(req.params.id);
+    const role = await Role.findByPk(req.params.id);
     if (!role) {
       return res.status(404).json({ message: "role not found" });
     }
-    await role.destroy();
+    await Role.destroy();
     res.status(200).json({ message: "role deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

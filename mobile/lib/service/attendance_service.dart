@@ -5,7 +5,7 @@ import 'package:mobile/models/attendance_model.dart';
 import 'package:geolocator/geolocator.dart';
 
 class AttendanceService {
-  final String _baseUrl = 'http://192.168.1.6:4000/api';
+  final String _baseUrl = 'http://192.168.1.9:4000/api';
   final AuthService _authService = AuthService();
   static const double _officeLatitude = -7.24574;
   static const double _officeLongitude = 108.170245;
