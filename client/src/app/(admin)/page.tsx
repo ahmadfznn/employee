@@ -4,14 +4,11 @@ import React, { useEffect, useState } from "react";
 import EmployeeChart from "@/components/ecommerce/EmployeeChart";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
 import {
-  FaUserTie,
   FaCalendarCheck,
   FaMoneyBillWave,
   FaHourglassHalf,
   FaBell,
   FaUsers,
-  FaSignOutAlt,
-  FaCog,
 } from "react-icons/fa";
 
 // Types
@@ -115,7 +112,7 @@ export default function Dashboard() {
               {totalAttendances}
             </div>
             <div className="text-gray-500 dark:text-gray-300 text-sm">
-              Today's Attendances
+              Todays Attendances
             </div>
           </div>
         </section>
